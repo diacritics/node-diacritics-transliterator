@@ -14,8 +14,26 @@ $ npm install diacritics-transliterator
 var diacritics = require("diacritics-transliterator");
 diacritics.setVersion("v1");
 var de = diacritics.getLanguage("German");
-// de -> {"de":{...}}
+// {"de":{...}}
 ```
+
+## Contents
+
+- Bacic functions
+  - [diacritics.setVersion(version)](#diacriticssetversionversion)
+  - [diacritics.getVersion()](#diacriticsgetversion)
+  - [diacritics.getLanguage(code)](#diacriticsgetlanguagecode)
+  - [diacritics.getVariant(code)](#diacriticsgetvariantcode)
+  - [diacritics.getAlphabet(code)](#diacriticsgetalphabetcode)
+  - [diacritics.getContinent(code)](#diacriticsgetcontinentcode)
+- Data processing functions
+  - [diacritics.getDiacritics(string)](#diacriticsgetdiacriticsstring)
+  - [diacritics.getBase(string)](#diacriticsgetbasestring)
+  - [diacritics.getDecomposed(string)](#diacriticsgetdecomposedstring)
+  - [diacritics.getEquivalents(string)](#diacriticsgetequivalentsstring)
+- Transliteration functions
+  - [diacritics.transliterate(string, type, [, variant])](#diacriticstransliteratestring-type--variant)
+  - [diacritics.createRegex(string, options)](#diacriticscreateregexstring-options)
 
 ## API
 
@@ -29,15 +47,15 @@ var diacritics = require("diacritics-transliterator");
 
 ### Basic functions
 
-#### `diacritics.setVersion(version)`
+#### diacritics.setVersion(version)
 
 Upon initialization, this module is set to the latest major release version of the diacritics API. To change the version, use this function to set the API to the desired _major_ release.
 
 The version parameter will accept the following values:
 
-* `v#`, where `v` is the abbreviation for "version" and `1` is the major release value.
-* `1`, where `1` is a numeric value or string.
-* Parsed values must be greater than zero and less than the current major release version.
+- `v#`, where `v` is the abbreviation for "version" and `1` is the major release value.
+- `1`, where `1` is a numeric value or string.
+- Parsed values must be greater than zero and less than or equal to the current major release version.
 
 ```js
 var diacritics = require("diacritics-transliterator");
@@ -48,7 +66,7 @@ Invalid values will be ignored and the version will remain unchanged.
 
 The returned value will be a string with a leading "v" (for version) followed by the currently set version number.
 
-#### `diacritics.getVersion()`
+#### diacritics.getVersion()
 
 Upon initialization, this function will always return the current major release version of the diacritics API.
 
@@ -59,7 +77,7 @@ diacritics.getVersion(); // "v1" returned
 
 The returned value will be a string with a leading "v" (for version) followed by the currently set version number.
 
-#### `diacritics.getLanguage(code)`
+#### diacritics.getLanguage(code)
 
 Returns the variant(s) metadata and data for the selected language code.
 
@@ -92,7 +110,7 @@ var test = diacritics.getLanguage("test");
 // { "message": "Language 'test' was not found" }
 ```
 
-#### `diacritics.getVariant(code)`
+#### diacritics.getVariant(code)
 
 Returns the metadata and data for the selected language variant code.
 
@@ -124,7 +142,7 @@ var test = diacritics.getVariant("test");
 // { "message": "Variant 'test' was not found" }
 ```
 
-#### `diacritics.getAlphabet(code)`
+#### diacritics.getAlphabet(code)
 
 Returns the metadata and data for all languages matching the given alphabet code.
 
@@ -157,7 +175,7 @@ var test = diacritics.getAlphabet("test");
 // { "message": "Alphabet 'test' was not found" }
 ```
 
-#### `diacritics.getContinent(code)`
+#### diacritics.getContinent(code)
 
 Returns the metadata and data for all languages matching the given continent code.
 
@@ -188,7 +206,7 @@ var test = diacritics.getContinent("test");
 
 ### Data processing functions
 
-#### `diacritics.getDiacritics(string)`
+#### diacritics.getDiacritics(string)
 
 Returns the metadata and data for all matching diacritics within the string.
 
@@ -223,19 +241,19 @@ var test = diacritics.getDiacritics("test");
 // { "message": "No diacritics found" }
 ```
 
-#### `diacritics.getBase(string)`
+#### diacritics.getBase(string)
 
 Returns the base data for all matching diacritics within the string.
 
 WIP...
 
-#### `diacritics.getDecomposed(string)`
+#### diacritics.getDecomposed(string)
 
 Returns the decomposed data for all matching diacritics within the string.
 
 WIP...
 
-#### `diacritics.getEquivalents(string)`
+#### diacritics.getEquivalents(string)
 
 Returns the equivalents data for all matching diacritics within the string.
 
@@ -243,18 +261,54 @@ WIP...
 
 ### Transliteration functions
 
-#### `diacritics.transliterate(string, type, [, variant])`
+#### diacritics.transliterate(string, type, [, variant])
 
-Replaces diacritics within the string with either the base or decomposed value. If the `variant` parameter is not defined, the first matching language for the diacritic will be used.
+Replaces diacritics within the string with either the base or decomposed value.
+
+- The `string` parameter contains both non-diacritics and any diacritic characters to be decomposed.
+- The `type` parameter is a string set to either "base" or "decompose". Defaults to "base". If a "base" value is not found, a "decompose" value will be used instead; and vice-versa.
+- The `variant` optional parameter is set using the language variant. If no variant is provided, the first matching language for the diacritic will be used.
+
+```js
+var diacritics = require("diacritics-transliterator");
+var german = diacritics.decompose("ü", "decompose" "de"); // "ue"
+var spanish = diacritics.decompose("ü", "base", "es"); // "u"
+var generic = diacritics.decompose("ü"); // "u"
+```
+
+#### diacritics.createRegex(string, options)
+
+Creates a regular expression to match the entire string. Set the `options` to only target only diacritics or non-diacritics.
+
+- The `string` parameter contains both non-diacritics and any diacritic characters to be decomposed.
+- The `options` parameter contains the following settings:
+
+  - `diacritics` - defaults to `true`.
+  - `nonDiacritics` - defaults to `true`.
+  - ``
 
 WIP...
 
-#### `diacritics.createRegex(string, options)`
+#### diacritics.replacePlaceholder(string, options)
 
-Creates a regular expression to match the entire string. Set the `options` to only target only diacritics or non-diacritics.
+Replaces placeholders within the string with the targeted diacritic values
+
+- The `string` parameter contains text and/or HTML with a diacritic placeholder value(s) to be replaced.
+- The `options` parameter contains the following settings:
+  - `placeholder` - format defaults to `<% diacritics: {url} %>`.
+  - `output` - defaults to `decompose` (values set as `decompose` or `base`).
+  - `variant` - variant to use; if not defined, the first variant result will be used.
+  - `callback` - function to allow customization: `function(data) { return data; }`
 
 WIP...
 
 ---
 
+## Related
+
+- [diacritics database](https://github.com/diacritics/database).
+- [diacritics API](https://github.com/diacritics/api).
+
 ## [License](LICENSE)
+
+MIT © [Julian Motz](https://github.com/julmot)
