@@ -1,0 +1,16 @@
+# Eclipse
+.settings/
+.project
+.buildpath
+
+# Webstorm
+.idea/
+
+# Dependencies
+node_modules/
+
+# Personal
+TODO
+
+# Build
+npm-debug.log*
