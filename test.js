@@ -73,6 +73,11 @@ test("Get Alphabet", t => {
     });
 });
 
+test("Format unicode", t => {
+    t.is(d.formatUnicode("T\\u00E9st"), "Tést");
+    t.is(d.formatUnicode("\\u00C4 Te\\u0301st"), "Ä Tést");
+});
+
 test("Get Diacritics", t => {
     // ensure current version is set, as all ava tests are run in parallel
     d.currentVersion = "v" + d.maxVersion;
@@ -95,5 +100,45 @@ test("Get Diacritics", t => {
     t.deepEqual(d.getDiacritics("abcñ-ß123"), result);
     t.deepEqual(d.getDiacritics("test"), {
         message: "No diacritics found"
+    });
+});
+
+test("Get Base", t => {
+    // ensure current version is set, as all ava tests are run in parallel
+    d.currentVersion = "v" + d.maxVersion;
+    // only compare a unique base, or things could get messy once the database
+    // gets bigger
+    const result = {
+        de: {
+            metadata: diacritics.de.de.metadata,
+            data: {
+                "ß": diacritics.de.de.data["ß"]
+            }
+        }
+    };
+    // getBase will accept a single base string, or array
+    t.deepEqual(d.getBase("ß"), result);
+    t.deepEqual(d.getBase(["&"]), {
+        message: "No matching bases found"
+    });
+});
+
+test("Get Decompose", t => {
+    // ensure current version is set, as all ava tests are run in parallel
+    d.currentVersion = "v" + d.maxVersion;
+    // only compare a unique base, or things could get messy once the database
+    // gets bigger
+    const result = {
+        de: {
+            metadata: diacritics.de.de.metadata,
+            data: {
+                "ß": diacritics.de.de.data["ß"]
+            }
+        }
+    };
+    // getBase will accept a single base string, or array
+    t.deepEqual(d.getDecompose("ss"), result);
+    t.deepEqual(d.getDecompose(["&", "test"]), {
+        message: "No matching decomposes found"
     });
 });

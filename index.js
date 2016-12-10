@@ -80,9 +80,17 @@ function getJSON(url) {
  *     // variant metadata & data
  *     variants:   {"de":{ metadata: {...}, data: {...}}},
  *     // diacritic variants with only data for the specific diacritic
- *     diacritics: {"�": {
- *         "de": { metadata: {...}, data: {"�" : {...}}}
- *         "es": { metadata: {...}, data: {"�" : {...}}}
+ *     diacritics: {
+ *     "ü": {
+ *         "de": { metadata: {...}, data: {"ü": {...}}}
+ *         "es": { metadata: {...}, data: {"ü": {...}}}
+ *     }},
+ *     base: {"u": {
+ *         "de": { metadata: {...}, data: {"ü": {...}}}
+ *         "es": { metadata: {...}, data: {"ú": {...}, "ü": {...}}}
+ *     }},
+ *     decompose: {"ss": {
+ *         "de": { metadata: {...}, data: {"ß": {...}}}
  *     }}
  * };
  * module.exports.cachev2 = {
@@ -102,7 +110,9 @@ function getCache() {
             continent: {},
             language: {},
             variants: {},
-            diacritics: {}
+            diacritics: {},
+            base: {},
+            decompose: {}
         };
     }
     return module.exports[ver];
@@ -182,13 +192,10 @@ function getVariants(type, code) {
 /**
  * Creates an array of diacritics values from the given string
  * @param  {string} string
- * @return {array|null}
+ * @return {?array}
  * @access protected
  */
 function findDiacritics(string) {
-/*  alternative to using regenerate?
-    return string.match(/[^\u0020-\u00A0]/g);
-*/
     const matchUnicode = regenerate(Array.from(string))
         // remove standard symbols, numbers & alphabet
         .removeRange(0x0020, 0x00A0)
@@ -197,25 +204,52 @@ function findDiacritics(string) {
 }
 
 /**
- * Convert unicode formatted within the database (`\\uHHHH` where H = hex), into
- * an actual unicode character. Using `.replace(/\\\u/g, "\u")` will appear to
- * work, but it does not create an actual unicode character; so we must use
- * `.fromCharCode()`
- * @param  {string} string - String with database formatted unicode value(s)
- * @return {string} - String containing actual unicode value(s)
- * @access protected
+ * Process diacritic base or decompose value of selected character(s) in the
+ * given string or array from the cache, or API
+ * @param  {string} type - type of data to obtain (e.g. "decompose" or "base")
+ * @param  {string|string[]} array - A string of a single base or decompose
+ * string (converted into an array), or an array of diacritic base or decompose
+ * string characters to process
+ * @return {object} - Base or decompose data for each found array entry, or
+ * an error message
+ * @access private
  */
-/* ********** Not used yet! commented out to prevent lint error **********
-function formatUnicode(string) {
-    return (string || "").toString().replace(/\\\u(\w{4})/g, function(m, hex) {
-        return String.fromCharCode(parseInt(hex, 16));
+function getProcessed(type, array) {
+    let result = {};
+    const cache = getCache();
+    if(!Array.isArray(array)) {
+        array = [array];
+    }
+    array.forEach(elm => {
+        let url = formatURL(type, elm),
+            data = {};
+        if(cache[type][elm]) {
+            // get cached values
+            data = cache[type][elm];
+            if(module.exports.debug) {
+                console.log(url + "; {loaded from cache}");
+            }
+        } else {
+            data = getJSON(url);
+        }
+        if(!data.message) {
+            Object.keys(data).forEach(variant => {
+                result[variant] = data[variant];
+            });
+        }
     });
+    if(Object.keys(result).length === 0) {
+        result = {
+            "message": `No matching ${type}s found`
+        };
+    }
+    return result;
 }
-*/
 
-/*****************************************************
- * Low level functions
- *****************************************************/
+/**
+ * Basic functions
+ * @access public
+ **/
 /**
  * Get currently set API version
  * @return {string} - Version formatted as "v#" where "#" is the version number
@@ -297,13 +331,29 @@ module.exports.getContinent = code => {
 }
 
 /**
+ * Converts the escaped unicode as stored within the database
+ * (`\\uHHHH` where H = hex) into actual unicode characters. Using
+ * `.replace(/\\\u/g, "\u")` will appear to work, but it does not create an
+ * actual unicode character; so we must use `.fromCharCode()` to properly
+ * convert the string.
+ * @param  {string} string - String with database formatted unicode value(s)
+ * @return {string} - String containing actual unicode value(s)
+ * @access protected
+ */
+module.exports.formatUnicode = string => {
+    return (string || "").toString().replace(/\\\u(\w{4})/g, function(m, hex) {
+        return String.fromCharCode(parseInt(hex, 16));
+    });
+}
+
+/**
  * Data processing functions
  * @access public
  **/
 /**
  * Get diacritic data of selected character(s) from cache, or API
  * @param  {string} string - Diacritic(s) to find
- * @return {string} - Diacritic data for each character found or error message
+ * @return {object} - All data for each diacritic found or error message
  * @access public
  */
 module.exports.getDiacritics = string => {
@@ -340,6 +390,143 @@ module.exports.getDiacritics = string => {
         };
     }
     return result;
+}
+
+/**
+ * Get diacritic base data of selected character(s) from cache, or API
+ * @param  {string|string[]} array - A string of a single base string (converted
+ * into an array), or an array of diacritic base string characters to process
+ * @return {object} - Base data for each diacritic base found or error message
+ * @access public
+ */
+module.exports.getBase = array => {
+    return getProcessed("base", array);
+}
+
+/**
+ * Get diacritic decompose data of selected character(s) from cache, or API
+ * @param  {string|string[]} array - A string of a single decompose string
+ * (converted into an array), or an array of diacritic decompose string
+ * characters to process
+ * @return {object} - Decompose data for each diacritic found or error message
+ * @access public
+ */
+module.exports.getDecompose = array => {
+    return getProcessed("decompose", array);
+}
+
+/**
+ * Transliteration functions
+ * @access public
+ **/
+/**
+ * Transliterate diacritics in the given string
+ * @param  {string} string - Text containing diacritic(s) to transliterate
+ * @param  {string} type - Set to "decompose" or "base" (default)
+ * @param  {string} variant - optional set to language variant to use
+ * @return {string} - processed string, or original string if no diacritics
+ * found
+ * @access public
+ */
+module.exports.transliterate = (string, type = "base", variant) => {
+    // to do
+}
+
+/**
+ * Callback to create a regular expression
+ * @callback diacritics~createRegExpCallback
+ * @param {string} character - current character being processed
+ * @param {string} result - regular expression string equivalent of the current
+ * character (e.g. character "ü" may yield a result of "(\u00FC|u\u0308)")
+ * @return {string} - string or a modified string that is to be used in the
+ * regular expression
+ */
+/**
+ * Create Regular Expression options
+ * @typedef diacritics~createRegExpOptions
+ * @type {object.<string>}
+ * @property {boolean} [diacritics=true] - Include all diacritics in the string;
+ * if `false`, the regex will replace the diacritic with a `\S`
+ * @property {boolean} [nonDiacritics=true] - Include all non-diacritics in the
+ * string
+ * @property {boolean} [includeEquivalents=true] - Include all diacritic
+ * equivalents within the regular expression
+ * @property {boolean} [caseSensitive=true] - Include case sensitive diacritic
+ * matches
+ * @property {boolean} [ignoreJoiners=false] - Include word joiners between
+ * each string character to match soft hyphens, zero width space, zero width
+ * non-joiner and zero width joiners in the regular expression
+ * @property {string} [flags="g"] - Regular expression flags to include
+ * @property {diacritics~createRegExpCallback} [each]
+ * @access private
+ */
+function regExpOptions() {
+    return {
+        diacritics: true,
+        nonDiacritics: true,
+        includeEquivalents: true,
+        caseSensitive: true,
+        ignoreJoiners: false,
+        flags: "g",
+        each: (character, result) => result
+    };
+}
+
+/**
+ * Create regular expression to target the given string with or without
+ * diacritics
+ * @param  {string} string - Text with or without diacritic characters to be
+ * processed into a regular expression
+ * @param  {diacritics~createRegExpOptions} [opt] - Optional options object
+ * @return {RegExp} - Regular expression that matches the processed string, or
+ * original string if no diacritics are found
+ * @access public
+ */
+module.exports.createRegExp = (string, options = regExpOptions()) => {
+    // to do
+}
+
+/**
+ * Callback used when replacing placeholders
+ * @callback diacritics~replacePlaceholderCallback
+ * @param {string} placeholder - current placeholder string being processed
+ * @param {array} result - resulting processed data as an array. For example, if
+ * the placeholder
+ * @return {string} - string used to replace the placeholder
+ */
+/**
+ * Replaces placeholders options
+ * @typedef diacritics~replacePlaceholderOptions
+ * @type {object.<string>}
+ * @property {string} [placeholder="<% diacritics: {query} %>"] - template of
+ * placeholder to target within the string
+ * @property {diacritics~replacePlaceholderCallback} [output]
+ * @access private
+ */
+function placeholderOptions() {
+    return {
+        placeholder: "<% diacritics: {query} %>",
+        output: (placeholder, result) => result.join(",")
+    };
+}
+/**
+ * Replaces placeholder(s) within the string with the targeted diacritic values.
+ * The placeholder contains a query string
+ * @param  {string} string - Text and/or HTML with a diacritic placeholder
+ * value(s) to be replaced
+ * @param  {diacritics~replacePlaceholderOptions} [opt] - Optional options
+ * object
+ * @return {string} - processed string, or original string if no diacritics
+ * found
+ * @example The `<% diacritics: base=o;equivalents.unicode %>` placeholder will
+ * be replaced with `\\u00FC,u\\u0308,\\u00FA,u\\u0301` - this example is only
+ * showing the results from `de` and `es` languages; there will be a lot more
+ * once there is more data. The result can be reformatted using the `each`
+ * callback function.
+ * @access public
+ */
+module.exports.replacePlaceholder = (string, options = placeholderOpts()) => {
+    // to do
 }
 
 // provide debug information to console
