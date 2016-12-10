@@ -247,6 +247,56 @@ function getProcessed(type, array) {
 }
 
 /**
+ * Extract mapping data giving priority to the indicated mapping type
+ * @param  {object} data - data[diacritic] object which contains mapping &
+ * equivalents (not used by this function)
+ * @param  {string} [type="base"] - mapping type (e.g. "decompose" or "base")
+ * @return {string} - Base or decompose value
+ * @access private
+ */
+function extractMapping(data, type = "base") {
+    // allow misspelling & capitalization of "decompose"
+    if(type.slice(0,1).toLowerCase() === "d") {
+        // priority decompose > base
+        return data.mapping.decompose || data.mapping.base;
+    }
+    // priority base > decompose
+    return data.mapping.base || data.mapping.decompose;
+}
+
+/**
+ * Extra diacritic mappings from language.data and return an object containing
+ * a `diacritic:replacement value` key:value pairing for quick reference
+ * @param  {object} data - language.data object
+ * @param  {string} [type="base"] - mapping type (e.g. "decompose" or "base")
+ * @param  {string} variant - language variant to target
+ * @return {object} - diacritic mapping data using either the base or decompose
+ * data for the selected variant, or first variant encountered if the variant
+ * parameter is undefined
+ * @access private
+ */
+function extractData(data, type = "base", variant) {
+    let result = {};
+    if(data && !data.message) {
+        Object.keys(data).forEach(language => {
+            const diacriticData = data[language].data;
+            Object.keys(diacriticData).forEach(diacritic => {
+                if (
+                    // target selected variant
+                    variant === language ||
+                    // if undefined, then use first available entry
+                    typeof variant === "undefined" && !result[diacritic]
+                ) {
+                    result[diacritic] =
+                        extractMapping(diacriticData[diacritic], type);
+                }
+            });
+        });
+    }
+    return result;
+}
+
+/**
  * Basic functions
  * @access public
  **/
@@ -431,11 +481,29 @@ module.exports.getDecompose = array => {
  * @param  {string} type - Set to "decompose" or "base" (default)
  * @param  {string} variant - optional set to language variant to use
  * @return {string} - processed string, or original string if no diacritics
- * found
+ * found; note that if a variant parameter is set and the string contains a
+ * diacritic not found in that language variant, it will not be processed!
  * @access public
  */
 module.exports.transliterate = (string, type = "base", variant) => {
-    // to do
+    let result = string;
+    const data = module.exports.getDiacritics(string),
+        // non-normalized diacritic list
+        diacritics = findDiacritics(string);
+    if(diacritics) {
+        diacritics.forEach(diacritic => {
+            const normalized = diacritic.normalize("NFKC"),
+                transliterate = extractData(data, type, variant);
+            // transliterate may be undefined if no variant found
+            if(typeof transliterate[diacritic] !== "undefined") {
+                result = result.replace(
+                    new RegExp(`(${normalized})`, "g"),
+                    transliterate[diacritic]
+                );
+            }
+        });
+    }
+    return result;
 }
 
 /**

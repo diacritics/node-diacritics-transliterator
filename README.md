@@ -339,12 +339,19 @@ Replaces diacritics within the string with either the base or decomposed value.
 
 The returned value will be a string with all matching diacritics replaced with the set "base" or "decompose" value.
 
+**Note** that if a `variant` parameter is set and the string contains a diacritic not found in that language variant, it will not be processed!
+
 ```js
-var diacritics = require("diacritics-transliterator");
-var german = diacritics.transliterate("ü", "decompose" "de"); // "ue"
-var spanish = diacritics.transliterate("ü", "base", "es"); // "u"
-var generic = diacritics.transliterate("ü"); // "u"
+var transliterate = require("diacritics-transliterator").transliterate;
+var german = transliterate("¿abcñ-ß123?", "decompose" "de"); // "¿abcñ-ss123?"
+var spanish = transliterate("¿abcñ-ß123?", "base", "es"); // "?abcn-ß123?"
+// The base of ß is still ß
+var generic = transliterate("¿abcñ-ß123?"); // "?abcn-ß123?"
+// If no diacritics match the set language variant, the original string is returned
+var unchanged = transliterate("¿abcñ-ß123?", "base", "test"); // "¿abcñ-ß123?"
 ```
+
+If no matching diacritics are found in the string or database, the original string is returned.
 
 #### diacritics.createRegExp(string [, options])
 
