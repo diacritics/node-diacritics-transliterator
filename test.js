@@ -87,7 +87,8 @@ test("Get Diacritics", t => {
         es: {
             metadata: diacritics.es.es.metadata,
             data: {
-                "ñ": diacritics.es.es.data["ñ"]
+                "ñ": diacritics.es.es.data["ñ"],
+                "¿": diacritics.es.es.data["¿"]
             }
         },
         de: {
@@ -97,7 +98,7 @@ test("Get Diacritics", t => {
             }
         }
     };
-    t.deepEqual(d.getDiacritics("abcñ-ß123"), result);
+    t.deepEqual(d.getDiacritics("¿abcñ-ß123"), result);
     t.deepEqual(d.getDiacritics("test"), {
         message: "No diacritics found"
     });

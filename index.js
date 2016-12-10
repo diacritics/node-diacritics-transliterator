@@ -379,7 +379,13 @@ module.exports.getDiacritics = string => {
             }
             if(!data.message) {
                 Object.keys(data).forEach(variant => {
-                    result[variant] = data[variant];
+                    if(!result[variant]) {
+                        result[variant] = data[variant];
+                    } else {
+                        // add am additional diacritic to a given variant
+                        result[variant].data[diacritic] =
+                            data[variant].data[diacritic];
+                    }
                 });
             }
         });
