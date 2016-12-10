@@ -26,13 +26,13 @@ var de = diacritics.getLanguage("German");
   - [diacritics.getVariant(code)](#diacriticsgetvariantcode)
   - [diacritics.getAlphabet(code)](#diacriticsgetalphabetcode)
   - [diacritics.getContinent(code)](#diacriticsgetcontinentcode)
-  - [diacritics.formatUnicode(string)](#diacriticsformatUnicodestring)
+  - [diacritics.formatUnicode(string)](#diacriticsformatunicodestring)
 - Data processing functions
   - [diacritics.getDiacritics(string)](#diacriticsgetdiacriticsstring)
   - [diacritics.getBase(array)](#diacriticsgetbasearray)
   - [diacritics.getDecompose(array)](#diacriticsgetdecomposearray)
 - Transliteration functions
-  - [diacritics.transliterate(string [, type][, variant]))](#diacriticstransliteratestring--type--variant)
+  - [diacritics.transliterate(string [, type][, variant]))](#diacriticstransliteratestring--type-variant)
   - [diacritics.createRegExp(string [, options])](#diacriticscreateregexpstring--options)
   - [diacritics.replacePlaceholder(string [, options])](#diacriticsreplaceplaceholderstring--options)
 
