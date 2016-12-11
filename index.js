@@ -9,8 +9,7 @@
 const databaseURL = "http://api.diacritics.io/",
 
     request = require("sync-request"),
-    regenerate = require("regenerate"),
-    fs = require("fs");
+    regenerate = require("regenerate");
 
 /**
  * Get current API version from module package.json; sets
@@ -19,7 +18,7 @@ const databaseURL = "http://api.diacritics.io/",
  */
 function getCurrentVersion() {
     let current = 1;
-    const pkg = JSON.parse(fs.readFileSync("./package.json", "utf8"));
+    const pkg = getJSON("https://git.io/v1Ejh");
     if(pkg && pkg.version) {
         const major = parseInt(pkg.version.split(".")[0], 10);
         // beta testing major version = 0
