@@ -12,7 +12,7 @@ const databaseURL = "http://api.diacritics.io/",
     regenerate = require("regenerate");
 
 /**
- * Get current API version from package package.json; sets
+ * Get current API version from diacritics/api package.json; sets
  * `module.exports.currentVersion` and `module.exports.maxVersion`
  * (https://github.com/diacritics/api/raw/master/package.json)
  * @access protected
