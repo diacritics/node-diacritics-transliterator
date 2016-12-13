@@ -20,6 +20,16 @@
     "name": "Rob Garrison",
     "email": "wowmotty@gmail.com"
   },
+  "maintainers": [
+    {
+      "name": "Julian Motz",
+      "web": "https://github.com/julmot"
+    },
+    {
+      "name": "Rob Garrison",
+      "web": "https://github.com/Mottie"
+    }
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/diacritics/node-diacritics-transliterator/issues"

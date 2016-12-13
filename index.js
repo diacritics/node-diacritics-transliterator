@@ -52,7 +52,7 @@ function getJSON(url) {
         response = request("GET", url);
     if(response.statusCode === 200) {
         result = JSON.parse(response.getBody().toString());
-        if(module.exports.debug) {
+        if(module.exports.debug.server) {
             console.log(
                 url + "; response: " +
                 (result.message ? result.message : "loaded")
@@ -62,7 +62,7 @@ function getJSON(url) {
         return result.message || result.version ? result : nextLayer(result);
     } else {
         result = `${url}; error: ${response.statusCode}`;
-        if(module.exports.debug) {
+        if(module.exports.debug.server) {
             console.log(result);
         }
         return {
@@ -175,7 +175,7 @@ function getVariants(type, code) {
         cache[type][code].forEach(variant => {
             results[variant] = cache.variant[variant];
         });
-        if(module.exports.debug) {
+        if(module.exports.debug.server) {
             console.log(url + "; {loaded from cache}");
         }
         return results;
@@ -190,17 +190,24 @@ function getVariants(type, code) {
 }
 
 /**
+ * findDiacritics options
+ * @typedef diacritics~findDiacriticsOptions
+ * @type {object.<string>}
+ * @property {boolean} [regexp=false] - if false, return diacritics matches
+ * array; if true, returns the regular expression
+/**
  * Creates an array of diacritics values from the given string
  * @param  {string} string
- * @return {?array}
+ * @param  {diacritics~findDiacriticsOptions} [options] - options object
+ * @return {?array|RegExp}
  * @access protected
  */
-function findDiacritics(string) {
+function findDiacritics(string, options = {regexp: false}) {
     const matchUnicode = regenerate(Array.from(string))
         // remove standard symbols, numbers & alphabet
         .removeRange(0x0020, 0x00A0)
         .toRegExp('g');
-    return string.match(matchUnicode);
+    return options.regexp ? matchUnicode : string.match(matchUnicode);
 }
 
 /**
@@ -226,7 +233,7 @@ function getProcessed(type, array) {
         if(cache[type][elm]) {
             // get cached values
             data = cache[type][elm];
-            if(module.exports.debug) {
+            if(module.exports.debug.server) {
                 console.log(url + "; {loaded from cache}");
             }
         } else {
@@ -248,8 +255,7 @@ function getProcessed(type, array) {
 
 /**
  * Extract mapping data giving priority to the indicated mapping type
- * @param  {object} data - data[diacritic] object which contains mapping &
- * equivalents (not used by this function)
+ * @param  {object} data - data[diacritic] object which contains mapping
  * @param  {string} [type="base"] - mapping type (e.g. "decompose" or "base")
  * @return {string} - Base or decompose value
  * @access private
@@ -297,6 +303,75 @@ function extractData(data, type = "base", variant) {
 }
 
 /**
+ * Extract raw equivalents data for use in regular expression & placeholders
+ * @param  {object} data - data[diacritic] object which contains equivalents
+ * @param  {string} diacritic - the diacritic character to target
+ * @param  {diacritics~createRegExpOptions} [opt] - Options object
+ * @return {array} - array containing unique diacritic equivalents
+ * @access private
+ */
+function extractEquivalents(data, diacritic, options) {
+    let result = [];
+    if(data && !data.message) {
+        Object.keys(data).forEach(language => {
+            const diacriticData = data[language].data;
+            Object.keys(diacriticData).forEach(char => {
+                if(diacritic === char) {
+                    diacriticData[char.toLowerCase()].equivalents.forEach(
+                        equivalent => {
+                            result.push(equivalent.raw);
+                        }
+                    );
+                    if (!options.caseSensitive) {
+                        diacriticData[char.toUpperCase()].equivalents.forEach(
+                            equivalent => {
+                                result.push(equivalent.raw);
+                            }
+                        );
+                    }
+                }
+            });
+        });
+    }
+    // remove duplicates
+    result = result.filter((value, index, self) => {
+        return self.indexOf(value) === index;
+    });
+    return result.length ? result : [diacritic];
+}
+
+/**
+ * Escape regular expression characters inside of an array
+ * @param {array} array
+ * @return {array} - new array
+ * @access protected
+ */
+function escapeRegExp(array) {
+    let result = [];
+    array.forEach((character, index) => {
+        result[index] = character.replace(/[$()*+\-.\/?[\\\]^{|}]/g, "\\$&");
+    });
+    return result;
+}
+
+/**
+ * Get upper and lower case equivalent values
+ * @param {array} array
+ * @return {array} - new array with unique equivalent values
+ * @access protected
+ */
+function getCaseSensitiveEquivalents(array) {
+    let result = [];
+    array.forEach(character => {
+        result.push(character.toUpperCase());
+        result.push(character.toLowerCase());
+    });
+    return array.concat(result).filter((value, index, self) => {
+        return self.indexOf(value) === index;
+    });
+}
+
+/**
  * Basic functions
  * @access public
  **/
@@ -341,7 +416,7 @@ module.exports.getVariant = code => {
         // return cached variant
         let result = {};
         result[code] = cache[code];
-        if(module.exports.debug) {
+        if(module.exports.debug.server) {
             console.log(url + "; {loaded from cache}");
         }
         return result;
@@ -421,7 +496,7 @@ module.exports.getDiacritics = string => {
             if(cache.diacritics[diacritic]) {
                 // get cached variant
                 data = cache.diacritics[diacritic];
-                if(module.exports.debug) {
+                if(module.exports.debug.server) {
                     console.log(url + "; {loaded from cache}");
                 }
             } else {
@@ -509,55 +584,179 @@ module.exports.transliterate = (string, type = "base", variant) => {
 /**
  * Callback to create a regular expression
  * @callback diacritics~createRegExpCallback
- * @param {string} character - current character being processed
+ * @param {string} character - current non-normalized character being processed
+ * (use `character.normalize("NFKC")` to make the character compatible with the
+ * database entry)
  * @param {string} result - regular expression string equivalent of the current
  * character (e.g. character "ü" may yield a result of "(\u00FC|u\u0308)")
+ * @param {object} data - the complete diacritic data object associated with
+ * the regular expression string (e.g. `{lang: {variant: {diacritic: {...}}}}`
+ * @param {number} index - the current character index. This index matches the
+ * character position from the original regular expression `string` parameter
  * @return {string} - string or a modified string that is to be used in the
- * regular expression
+ * resulting regular expression. Any returned falsy values will not be added
+ * to the final regular expression.
+ */
+/**
+ * Callback to finalize the regular expression
+ * @callback diacritics~createRegExpFinalize
+ * @param {string[]} array - array of each character to be added to the regular
+ * expression. Each array item is created from the original string split, and
+ * will contain diacritics (if `diacritics` is `true`), or non-diacritics (if
+ * `nonDiacritics` is `true`), but not both
+ * @param {string} joiner - A a string used to `.join()` the `array` parameter
+ * into its final regular expression string. When the `ignoreJoiners` option is
+ * `false`, this string is empty (`""`), and when the `ignoreJoiners` option is
+ * `true`, this string value becomes `"[\u00ad|\u200b|\u200c|\u200d]?"`. Return
+ * the final regular expression string once it has been created
+ * @return {string}
  */
 /**
  * Create Regular Expression options
  * @typedef diacritics~createRegExpOptions
  * @type {object.<string>}
- * @property {boolean} [diacritics=true] - Include all diacritics in the string;
- * if `false`, the regex will replace the diacritic with a `\S`
- * @property {boolean} [nonDiacritics=true] - Include all non-diacritics in the
- * string
- * @property {boolean} [includeEquivalents=true] - Include all diacritic
- * equivalents within the regular expression
- * @property {boolean} [caseSensitive=true] - Include case sensitive diacritic
- * matches
- * @property {boolean} [ignoreJoiners=false] - Include word joiners between
- * each string character to match soft hyphens, zero width space, zero width
- * non-joiner and zero width joiners in the regular expression
- * @property {string} [flags="g"] - Regular expression flags to include
+ * @property {boolean} [diacritics=true] - When `true`, all diacritics from the
+ * `string` option are included; if `false`, all diacritics within the regular
+ * expression will be replaced with a `\\S` (set by the `replaceDiacritic`
+ * option).
+ * @property {string}  [replaceDiacritic="\\S"] - Character used to replace
+ * diacritics when the `diacritics` option is `false`. Note, the range `{1,2}`
+ * is only added if the diacritic contains multiple characters (e.g. letter +
+ * combining diacritic) and the `replaceDiacritic` option is set as `"\\S"`
+ * (e.g. `e\u00e9` becomes `\\S{1,2}`. Make sure to double escape any regular
+ * expression special characters
+ * @property {boolean} [nonDiacritics=true] - When `true`, all non-diacritics
+ * from the string are included; if `false`, non-diacritics are excluded so that
+ * only diacritics are targeted by the regular expression
+ * @property {boolean} [includeEquivalents=true] - When `true`, all diacritic
+ * equivalents within the regular expression are included; if `false`, only the
+ * diacritics in the `string` option are processed
+ * @property {boolean} [caseSensitive=true] - When `true`, case sensitive
+ * diacritics are matched; if `false`, both upper and lower case versions of the
+ * diacritic are included
+ * @property {boolean} [ignoreJoiners=false] - When `true`, word joiners to
+ * match soft hyphens, zero width space, zero width non-joiner and zero width
+ * joiners are added between each character in the regular expression
+ * @property {string} [flags="gu"] - Flags to include when creating the regular
+ * expression
  * @property {diacritics~createRegExpCallback} [each]
+ * @property {diacritics~createRegExpFinalize} [finalize]
  * @access private
  */
 function regExpOptions() {
     return {
         diacritics: true,
+        replaceDiacritic: "\\S",
         nonDiacritics: true,
         includeEquivalents: true,
         caseSensitive: true,
         ignoreJoiners: false,
-        flags: "g",
-        each: (character, result) => result
+        flags: "gu",
+        // callbacks
+        each: null,    // (character, result, data, index) => result,
+        finalize: null // (array, joiner) => array.join(joiner)
     };
 }
-
 /**
  * Create regular expression to target the given string with or without
  * diacritics
  * @param  {string} string - Text with or without diacritic characters to be
- * processed into a regular expression
- * @param  {diacritics~createRegExpOptions} [opt] - Optional options object
+ * processed into a regular expression that matches this value
+ * @param  {diacritics~createRegExpOptions} [opt] - Options object
  * @return {RegExp} - Regular expression that matches the processed string, or
- * original string if no diacritics are found
+ * original string if no diacritics are included
  * @access public
  */
-module.exports.createRegExp = (string, options = regExpOptions()) => {
-    // to do
+module.exports.createRegExp = (string, options = {}) => {
+    options = Object.assign(regExpOptions(), options);
+    let indx, include,
+        regexp = [],
+        array = [],
+        result = options.caseSensitive ?
+            string :
+            string.toLowerCase() + string.toUpperCase();
+    const data = module.exports.getDiacritics(result),
+        // non-normalized diacritic list
+        diacritics = findDiacritics(string, { regexp: true }),
+        matches = string.match(diacritics);
+    if(matches) {
+        array = escapeRegExp(Array.from(string));
+        array.forEach((character, index) => {
+            result = ""; // clear result!
+            const isDiacritic = matches.indexOf(character) > -1,
+                equivalents = options.includeEquivalents ?
+                extractEquivalents(data, character.normalize("NFKC"), options) :
+                [character];
+            if(options.diacritics && isDiacritic) {
+                if(equivalents.length > 1) {
+                    result = options.nonDiacritics ?
+                        `(${equivalents.join("|")})` :
+                        // if nonDiacritics is false; combine all matching
+                        // diacritics after processing; This adds a trailing
+                        // pipe that must be removed!!
+                        `${equivalents.join("|")}|`;
+                } else {
+                    result = equivalents[0];
+                }
+            } else if (options.nonDiacritics) {
+                result = character;
+                // ignore diacritics
+                if(matches.indexOf(character) > -1) {
+                    indx = character.length;
+                    if(options.includeEquivalents) {
+                        // find longest equivalent
+                        indx = 1;
+                        equivalents.forEach(equivalent => {
+                            indx = Math.max(indx, equivalent.length);
+                        });
+                    }
+                    if(options.replaceDiacritic === "\\S") {
+                        // "e\u0301" will be converted into "\\S{1,2}"
+                        result = options.replaceDiacritic +
+                            (indx > 1 ? `{1,${indx}}` : "");
+                    } else {
+                        result = options.replaceDiacritic;
+                    }
+                }
+            }
+            if(typeof options.each === "function") {
+                result = options.each(
+                    character,
+                    result,
+                    data,
+                    index
+                );
+            }
+            // don't add falsy values to regex
+            if (result) {
+                regexp.push(result);
+            }
+        });
+        if(options.diacritics && !options.nonDiacritics) {
+            // only diacritics are processed, wrap them all
+            regexp.unshift("(");
+            // remove trailing pipe
+            regexp[regexp.length - 1] = regexp[regexp.length - 1]
+                .replace(/\|$/, "");
+            regexp.push(")");
+        }
+    }
+    result = regexp.length && options.ignoreJoiners ?
+        "[\u00ad|\u200b|\u200c|\u200d]?" : "";
+    if(typeof options.finalize === "function") {
+        regexp = options.finalize(regexp, result);
+    }
+    // just in case...
+    if(Array.isArray(regexp)) {
+        regexp = regexp.join(result);
+    }
+    if (module.exports.debug.regexp) {
+        console.log(
+            new RegExp(regexp, options.flags).toString(),
+            JSON.stringify(options).replace(/\s+/g, " ")
+        );
+    }
+    return new RegExp(regexp, options.flags);
 }
 
 /**
@@ -599,12 +798,16 @@ function placeholderOptions() {
  * callback function.
  * @access public
  */
-module.exports.replacePlaceholder = (string, options = placeholderOpts()) => {
+module.exports.replacePlaceholder = (string, options = {}) => {
+    options = Object.assign(regExpOptions(), options);
     // to do
 }
 
 // provide debug information to console
-module.exports.debug = false;
+module.exports.debug = {
+    server: false, // show server & cache interactions
+    regexp: false  // show resulting regular expressions
+};
 
 // Initialize module
 getCurrentVersion();
