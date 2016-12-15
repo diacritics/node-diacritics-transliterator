@@ -222,7 +222,7 @@ const regexpTests = [{
     options: { nonDiacritics: false },
     tests: [
         [ "true", "T\u00E9st or Tr\u00FCst", "nonDiacritics:false; diacritic" ],
-        [ 
+        [
             "true",
             "Te\u0301st or Tru\u0308st",
             "nonDiacritics:false; base + combining diacritic"

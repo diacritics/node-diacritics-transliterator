@@ -271,35 +271,38 @@ function extractMapping(data, type = "base") {
 }
 
 /**
+ * @typedef diacritic~extractDataProcessing
+ * @type {object}
+ * @property {object} data - targeted portion of database
+ * @property {string} language - current language being processed
+ * @property {string|undefined} diacritic - current diacritic; only defined when
+ * processing "data" (not "metadata")
+ */
+/**
  * Extra diacritic mappings from language.data and return an object containing
  * a `diacritic:replacement value` key:value pairing for quick reference
  * @param  {object} data - language.data object
- * @param  {string} [type="base"] - mapping type (e.g. "decompose" or "base")
- * @param  {string} variant - language variant to target
- * @return {object} - diacritic mapping data using either the base or decompose
- * data for the selected variant, or first variant encountered if the variant
- * parameter is undefined
+ * @param  {string} [type="data"] - target object ("metadata" or "data")
+ * @param  {diacritic~extractDataProcessing} process - callback to process data
  * @access private
  */
-function extractData(data, type = "base", variant) {
-    let result = {};
-    if(data && !data.message) {
-        Object.keys(data).forEach(language => {
-            const diacriticData = data[language].data;
-            Object.keys(diacriticData).forEach(diacritic => {
-                if (
-                    // target selected variant
-                    variant === language ||
-                    // if undefined, then use first available entry
-                    typeof variant === "undefined" && !result[diacritic]
-                ) {
-                    result[diacritic] =
-                        extractMapping(diacriticData[diacritic], type);
-                }
-            });
+function extractData(database, type = "data", process) {
+    if(database && !database.message) {
+        Object.keys(database).forEach(language => {
+            const data = {
+                data: database[language][type],
+                language: language
+            };
+            if(type === "metadata") {
+                process(data);
+            } else {
+                Object.keys(data.data).forEach(diacritic => {
+                    data.diacritic = diacritic;
+                    process(data);
+                });
+            }
         });
     }
-    return result;
 }
 
 /**
@@ -312,27 +315,22 @@ function extractData(data, type = "base", variant) {
  */
 function extractEquivalents(data, diacritic, options) {
     let result = [];
-    if(data && !data.message) {
-        Object.keys(data).forEach(language => {
-            const diacriticData = data[language].data;
-            Object.keys(diacriticData).forEach(char => {
-                if(diacritic === char) {
-                    diacriticData[char.toLowerCase()].equivalents.forEach(
-                        equivalent => {
-                            result.push(equivalent.raw);
-                        }
-                    );
-                    if (!options.caseSensitive) {
-                        diacriticData[char.toUpperCase()].equivalents.forEach(
-                            equivalent => {
-                                result.push(equivalent.raw);
-                            }
-                        );
-                    }
+    extractData(data, "data", params => {
+        if(diacritic === params.diacritic) {
+            params.data[params.diacritic.toLowerCase()].equivalents.forEach(
+                equivalent => {
+                    result.push(equivalent.raw);
                 }
-            });
-        });
-    }
+            );
+            if (!options.caseSensitive) {
+                params.data[params.diacritic.toUpperCase()].equivalents.forEach(
+                    equivalent => {
+                        result.push(equivalent.raw);
+                    }
+                );
+            }
+        }
+    });
     // remove duplicates
     result = result.filter((value, index, self) => {
         return self.indexOf(value) === index;
@@ -568,7 +566,19 @@ module.exports.transliterate = (string, type = "base", variant) => {
     if(diacritics) {
         diacritics.forEach(diacritic => {
             const normalized = diacritic.normalize("NFKC"),
-                transliterate = extractData(data, type, variant);
+                transliterate = {};
+            extractData(data, "data", params => {
+                if (
+                    // target selected variant
+                    variant === params.language ||
+                    // if undefined, then use first available entry
+                    typeof variant === "undefined" &&
+                    !transliterate[params.diacritic]
+                ) {
+                    transliterate[params.diacritic] =
+                        extractMapping(params.data[params.diacritic], type);
+                }
+            });
             // transliterate may be undefined if no variant found
             if(typeof transliterate[diacritic] !== "undefined") {
                 result = result.replace(
