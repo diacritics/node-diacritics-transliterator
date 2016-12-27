@@ -487,7 +487,7 @@ module.exports.transliterate = (string, type = "base", variant) => {
             extractData(data, "data", params => {
                 if(
                     // target selected variant
-                    variant === params.language ||
+                    variant === params.variant ||
                     // if undefined, then use first available entry
                     typeof variant === "undefined" &&
                     !transliterate[params.diacritic]
