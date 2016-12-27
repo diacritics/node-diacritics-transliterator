@@ -12,6 +12,10 @@ const databaseURL = "http://api.diacritics.io/",
     regenerate = require("regenerate");
 
 /**
+ * Support functions
+ * @access protected
+ */
+/**
  * Get current API version from diacritics/api package.json; sets
  * `module.exports.currentVersion` and `module.exports.maxVersion`
  * (https://github.com/diacritics/api/raw/master/package.json)
@@ -58,8 +62,15 @@ function getJSON(url) {
                 (result.message ? result.message : "loaded")
             );
         }
-        // return error message, package.json, or next object layer
-        return result.message || result.version ? result : nextLayer(result);
+        // return error message, package.json
+        if(result.message || result.version) {
+            return result;
+        }
+        // save data to cache
+        if(!module.exports.cache[url]) {
+            module.exports.cache[url] = nextLayer(result);
+        }
+        return module.exports.cache[url];
     } else {
         result = `${url}; error: ${response.statusCode}`;
         if(module.exports.debug.server) {
@@ -69,53 +80,6 @@ function getJSON(url) {
             "message": result
         };
     }
-}
-
-/**
- * cached database values to minimize server interaction
- * module.exports.cachev1 = {
- *     alphabet:   {"Latn": [...]}, // array of variant keys
- *     continent:  {"EU": [...]},   // array of variant keys
- *     language:   {"de": [...]},   // array of variant keys
- *     // variant metadata & data
- *     variants:   {"de":{ metadata: {...}, data: {...}}},
- *     // diacritic variants with only data for the specific diacritic
- *     diacritics: {
- *     "ü": {
- *         "de": { metadata: {...}, data: {"ü": {...}}}
- *         "es": { metadata: {...}, data: {"ü": {...}}}
- *     }},
- *     base: {"u": {
- *         "de": { metadata: {...}, data: {"ü": {...}}}
- *         "es": { metadata: {...}, data: {"ú": {...}, "ü": {...}}}
- *     }},
- *     decompose: {"ss": {
- *         "de": { metadata: {...}, data: {"ß": {...}}}
- *     }}
- * };
- * module.exports.cachev2 = {
- *     alphabet: {"Cyrl":[...]}, ...
- * };
- */
-/**
- * get current cache
- * @return {object} - Cache for current version
- * @access protected
- */
-function getCache() {
-    const ver = "cache" + module.exports.currentVersion;
-    if(typeof module.exports[ver] === "undefined") {
-        module.exports[ver] = {
-            alphabet: {},
-            continent: {},
-            language: {},
-            variants: {},
-            diacritics: {},
-            base: {},
-            decompose: {}
-        };
-    }
-    return module.exports[ver];
 }
 
 /**
@@ -131,28 +95,9 @@ function getCache() {
  */
 function nextLayer(result) {
     let obj = {};
-    const cache = getCache();
     Object.keys(result).forEach(lang => {
         Object.keys(result[lang]).forEach(variant => {
             obj[variant] = result[lang][variant];
-
-            // save all variants to cache
-            cache[variant] = result[lang][variant];
-
-            // save all diacritics to cache
-            const data = result[lang][variant];
-            Object.keys(data.data).forEach(diacritic => {
-                const dCache = cache.diacritics;
-                if(!dCache[diacritic]) {
-                    dCache[diacritic] = {};
-                }
-                // include lang metadata & data
-                dCache[diacritic][lang] = {
-                    metadata: data.metadata,
-                    data: {}
-                };
-                dCache[diacritic][lang].data[diacritic] = data.data[diacritic];
-            });
         });
     });
     return obj;
@@ -166,27 +111,19 @@ function nextLayer(result) {
  * @access private
  */
 function getVariants(type, code) {
-    const cache = getCache(),
-        url = formatURL(type, code);
-    let results = {};
-    if(cache[type][code]) {
-        // alphabet, continent & language cache contains an array of variant
-        // keys
-        cache[type][code].forEach(variant => {
-            results[variant] = cache.variant[variant];
-        });
+    const url = formatURL(type, code);
+    if(type === "variant") {
+        // just in case this function gets called for "variant"
+        return module.exports.getVariant(code);
+    }
+    if(module.exports.cache[url]) {
         if(module.exports.debug.server) {
             console.log(url + "; {loaded from cache}");
         }
-        return results;
+        return module.exports.cache[url];
     }
     // not cached, get data from API
-    results = getJSON(url);
-    if(!results.message) {
-        // save array of variants codes into cache
-        cache[type][code] = Object.keys(results);
-    }
-    return results;
+    return getJSON(url);
 }
 
 /**
@@ -195,11 +132,12 @@ function getVariants(type, code) {
  * @type {object.<string>}
  * @property {boolean} [regexp=false] - if false, return diacritics matches
  * array; if true, returns the regular expression
+ */
 /**
  * Creates an array of diacritics values from the given string
  * @param  {string} string
  * @param  {diacritics~findDiacriticsOptions} [options] - options object
- * @return {?array|RegExp}
+ * @return {(?array|RegExp)}
  * @access protected
  */
 function findDiacritics(string, options = {regexp: false}) {
@@ -214,7 +152,7 @@ function findDiacritics(string, options = {regexp: false}) {
  * Process diacritic base or decompose value of selected character(s) in the
  * given string or array from the cache, or API
  * @param  {string} type - type of data to obtain (e.g. "decompose" or "base")
- * @param  {string|string[]} array - A string of a single base or decompose
+ * @param  {(string|string[])} array - A string of a single base or decompose
  * string (converted into an array), or an array of diacritic base or decompose
  * string characters to process
  * @return {object} - Base or decompose data for each found array entry, or
@@ -223,16 +161,15 @@ function findDiacritics(string, options = {regexp: false}) {
  */
 function getProcessed(type, array) {
     let result = {};
-    const cache = getCache();
     if(!Array.isArray(array)) {
         array = [array];
     }
     array.forEach(elm => {
         let url = formatURL(type, elm),
             data = {};
-        if(cache[type][elm]) {
+        if(module.exports.cache[url]) {
             // get cached values
-            data = cache[type][elm];
+            data = module.exports.cache[url];
             if(module.exports.debug.server) {
                 console.log(url + "; {loaded from cache}");
             }
@@ -274,24 +211,24 @@ function extractMapping(data, type = "base") {
  * @typedef diacritic~extractDataProcessing
  * @type {object}
  * @property {object} data - targeted portion of database
- * @property {string} language - current language being processed
- * @property {string|undefined} diacritic - current diacritic; only defined when
- * processing "data" (not "metadata")
+ * @property {string} variant - current variant being processed
+ * @property {(string|undefined)} diacritic - current diacritic; only defined
+ * when processing "data" (not "metadata")
  */
 /**
  * Extra diacritic mappings from language.data and return an object containing
  * a `diacritic:replacement value` key:value pairing for quick reference
- * @param  {object} data - language.data object
+ * @param  {object} database - language.data object
  * @param  {string} [type="data"] - target object ("metadata" or "data")
  * @param  {diacritic~extractDataProcessing} process - callback to process data
  * @access private
  */
 function extractData(database, type = "data", process) {
     if(database && !database.message) {
-        Object.keys(database).forEach(language => {
+        Object.keys(database).forEach(variant => {
             const data = {
-                data: database[language][type],
-                language: language
+                data: database[variant][type],
+                variant: variant
             };
             if(type === "metadata") {
                 process(data);
@@ -309,7 +246,7 @@ function extractData(database, type = "data", process) {
  * Extract raw equivalents data for use in regular expression & placeholders
  * @param  {object} data - data[diacritic] object which contains equivalents
  * @param  {string} diacritic - the diacritic character to target
- * @param  {diacritics~createRegExpOptions} [opt] - Options object
+ * @param  {diacritics~createRegExpOptions} [options] - Options object
  * @return {array} - array containing unique diacritic equivalents
  * @access private
  */
@@ -322,7 +259,7 @@ function extractEquivalents(data, diacritic, options) {
                     result.push(equivalent.raw);
                 }
             );
-            if (!options.caseSensitive) {
+            if(!options.caseSensitive) {
                 params.data[params.diacritic.toUpperCase()].equivalents.forEach(
                     equivalent => {
                         result.push(equivalent.raw);
@@ -353,23 +290,6 @@ function escapeRegExp(array) {
 }
 
 /**
- * Get upper and lower case equivalent values
- * @param {array} array
- * @return {array} - new array with unique equivalent values
- * @access protected
- */
-function getCaseSensitiveEquivalents(array) {
-    let result = [];
-    array.forEach(character => {
-        result.push(character.toUpperCase());
-        result.push(character.toLowerCase());
-    });
-    return array.concat(result).filter((value, index, self) => {
-        return self.indexOf(value) === index;
-    });
-}
-
-/**
  * Basic functions
  * @access public
  **/
@@ -386,7 +306,7 @@ module.exports.getVersion = () => {
 
 /**
  * Set API version
- * @param  {string|number} version - All non-digits will be ignored
+ * @param  {(string|number)} version - All non-digits will be ignored
  * @return {string} - Version formatted as "v#" where "#" is the version number
  * @example
  * require("diacritics-transliterator").setVersion("v1");
@@ -408,16 +328,13 @@ module.exports.setVersion = version => {
  * @access public
  */
 module.exports.getVariant = code => {
-    const cache = getCache(),
-        url = formatURL("variant", code);
-    if(cache[code]) {
+    const url = formatURL("variant", code);
+    if(module.exports.cache[url]) {
         // return cached variant
-        let result = {};
-        result[code] = cache[code];
         if(module.exports.debug.server) {
             console.log(url + "; {loaded from cache}");
         }
-        return result;
+        return module.exports.cache[url];
     } else {
         return getJSON(url);
     }
@@ -485,15 +402,14 @@ module.exports.getDiacritics = string => {
     string = string.normalize("NFKC");
     let result = {};
     // get diacritic(s) from the string
-    const diacritics = findDiacritics(string),
-        cache = getCache();
+    const diacritics = findDiacritics(string);
     if(diacritics) {
         diacritics.forEach(diacritic => {
             let url = formatURL("diacritic", encodeURI(diacritic)),
                 data = {};
-            if(cache.diacritics[diacritic]) {
+            if(module.exports.cache[url]) {
                 // get cached variant
-                data = cache.diacritics[diacritic];
+                data = module.exports.cache[url];
                 if(module.exports.debug.server) {
                     console.log(url + "; {loaded from cache}");
                 }
@@ -523,8 +439,9 @@ module.exports.getDiacritics = string => {
 
 /**
  * Get diacritic base data of selected character(s) from cache, or API
- * @param  {string|string[]} array - A string of a single base string (converted
- * into an array), or an array of diacritic base string characters to process
+ * @param  {(string|string[])} array - A string of a single base string
+ * (converted into an array), or an array of diacritic base string characters
+ * to process
  * @return {object} - Base data for each diacritic base found or error message
  * @access public
  */
@@ -534,7 +451,7 @@ module.exports.getBase = array => {
 
 /**
  * Get diacritic decompose data of selected character(s) from cache, or API
- * @param  {string|string[]} array - A string of a single decompose string
+ * @param  {(string|string[])} array - A string of a single decompose string
  * (converted into an array), or an array of diacritic decompose string
  * characters to process
  * @return {object} - Decompose data for each diacritic found or error message
@@ -568,7 +485,7 @@ module.exports.transliterate = (string, type = "base", variant) => {
             const normalized = diacritic.normalize("NFKC"),
                 transliterate = {};
             extractData(data, "data", params => {
-                if (
+                if(
                     // target selected variant
                     variant === params.language ||
                     // if undefined, then use first available entry
@@ -663,7 +580,7 @@ function regExpOptions() {
         ignoreJoiners: false,
         flags: "gu",
         // callbacks
-        each: null,    // (character, result, data, index) => result,
+        each: null,    // (character, result, data, index) => result
         finalize: null // (array, joiner) => array.join(joiner)
     };
 }
@@ -672,14 +589,14 @@ function regExpOptions() {
  * diacritics
  * @param  {string} string - Text with or without diacritic characters to be
  * processed into a regular expression that matches this value
- * @param  {diacritics~createRegExpOptions} [opt] - Options object
+ * @param  {diacritics~createRegExpOptions} [options] - Options object
  * @return {RegExp} - Regular expression that matches the processed string, or
  * original string if no diacritics are included
  * @access public
  */
 module.exports.createRegExp = (string, options = {}) => {
     options = Object.assign(regExpOptions(), options);
-    let indx, include,
+    let indx,
         regexp = [],
         array = [],
         result = options.caseSensitive ?
@@ -693,7 +610,7 @@ module.exports.createRegExp = (string, options = {}) => {
         array = escapeRegExp(Array.from(string));
         array.forEach((character, index) => {
             result = ""; // clear result!
-            const isDiacritic = matches.indexOf(character) > -1,
+            const isDiacritic = matches.includes(character),
                 equivalents = options.includeEquivalents ?
                 extractEquivalents(data, character.normalize("NFKC"), options) :
                 [character];
@@ -708,10 +625,10 @@ module.exports.createRegExp = (string, options = {}) => {
                 } else {
                     result = equivalents[0];
                 }
-            } else if (options.nonDiacritics) {
+            } else if(options.nonDiacritics) {
                 result = character;
                 // ignore diacritics
-                if(matches.indexOf(character) > -1) {
+                if(matches.includes(character)) {
                     indx = character.length;
                     if(options.includeEquivalents) {
                         // find longest equivalent
@@ -738,7 +655,7 @@ module.exports.createRegExp = (string, options = {}) => {
                 );
             }
             // don't add falsy values to regex
-            if (result) {
+            if(result) {
                 regexp.push(result);
             }
         });
@@ -760,7 +677,7 @@ module.exports.createRegExp = (string, options = {}) => {
     if(Array.isArray(regexp)) {
         regexp = regexp.join(result);
     }
-    if (module.exports.debug.regexp) {
+    if(module.exports.debug.regexp) {
         console.log(
             new RegExp(regexp, options.flags).toString(),
             JSON.stringify(options).replace(/\s+/g, " ")
@@ -813,11 +730,23 @@ module.exports.replacePlaceholder = (string, options = {}) => {
     // to do
 }
 
-// provide debug information to console
+/**
+ * Internal cache to prevent duplicate calls to the API
+ * @access public
+ */
+module.exports.cache = {};
+
+/**
+ * Debug settings - sends output to console
+ */
 module.exports.debug = {
     server: false, // show server & cache interactions
-    regexp: false  // show resulting regular expressions
+    regexp: false, // show resulting regular expressions
+    regexpTests: false, // show all regular expression tests
+    placeholder: false // show string breakdown and results
 };
 
-// Initialize module
+/**
+ * Initialize module
+ */
 getCurrentVersion();
