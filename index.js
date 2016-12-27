@@ -567,7 +567,7 @@ module.exports.transliterate = (string, type = "base", variant) => {
  * @property {string} [flags="gu"] - Flags to include when creating the regular
  * expression
  * @property {diacritics~createRegExpCallback} [each]
- * @property {diacritics~createRegExpFinalize} [finalize]
+ * @property {diacritics~createRegExpFinalize} [done]
  * @access private
  */
 function regExpOptions() {
@@ -580,8 +580,8 @@ function regExpOptions() {
         ignoreJoiners: false,
         flags: "gu",
         // callbacks
-        each: null,    // (character, result, data, index) => result
-        finalize: null // (array, joiner) => array.join(joiner)
+        each: null, // (character, result, data, index) => result
+        done: null  // (array, joiner) => array.join(joiner)
     };
 }
 /**
@@ -670,8 +670,8 @@ module.exports.createRegExp = (string, options = {}) => {
     }
     result = regexp.length && options.ignoreJoiners ?
         "[\u00ad|\u200b|\u200c|\u200d]?" : "";
-    if(typeof options.finalize === "function") {
-        regexp = options.finalize(regexp, result);
+    if(typeof options.done === "function") {
+        regexp = options.done(regexp, result);
     }
     // just in case...
     if(Array.isArray(regexp)) {
