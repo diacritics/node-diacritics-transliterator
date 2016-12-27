@@ -2,7 +2,7 @@
 
 ## Development
 
-_Requirements: Latest [Node.js][node-js] (including npm)_
+_Requirements: Latest [Node.js][node-js] (includes npm)_
 
 To install the modules needed for developing, you should clone or download this repository then run:
 

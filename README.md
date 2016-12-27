@@ -2,13 +2,13 @@
 
 > Diacritic transliteration tools using diacritics.io API
 
-## Installation
+# Installation
 
 ```console
 $ npm install diacritics-transliterator
 ```
 
-## Usage
+# Usage
 
 ```js
 var diacritics = require("diacritics-transliterator");
@@ -17,9 +17,9 @@ var de = diacritics.getLanguage("German");
 // {"de":{...}}
 ```
 
-## API
+# API
 
-### Contents
+## Contents
 
 - [Initializing](#initializing)
 - [Basic functions](#basic-functions)
@@ -39,7 +39,7 @@ var de = diacritics.getLanguage("German");
   - [diacritics.createRegExp(string [, options])](#diacriticscreateregexpstring--options)
   - [diacritics.replacePlaceholder(string [, options])](#diacriticsreplaceplaceholderstring--options)
 
-### Initializing
+## Initializing
 
 Each API method requires the `diacritics-transliterator` module.
 
@@ -47,9 +47,9 @@ Each API method requires the `diacritics-transliterator` module.
 var diacritics = require("diacritics-transliterator");
 ```
 
-### Basic functions
+## Basic functions
 
-#### diacritics.setVersion(version)
+### diacritics.setVersion(version)
 
 Upon initialization, this module is set to the latest major release version of the diacritics API. To change the version, use this function to set the API to the desired _major_ release.
 
@@ -68,7 +68,7 @@ Invalid values will be ignored and the version will remain unchanged.
 
 The returned value will be a string with a leading "v" (for version) followed by the currently set version number.
 
-#### diacritics.getVersion()
+### diacritics.getVersion()
 
 Upon initialization, this function will always return the current major release version of the diacritics API.
 
@@ -79,7 +79,7 @@ diacritics.getVersion(); // "v1" returned
 
 The returned value will be a string with a leading "v" (for version) followed by the currently set version number.
 
-#### diacritics.getLanguage(code)
+### diacritics.getLanguage(code)
 
 Returns the variant(s) metadata and data for the selected language code.
 
@@ -112,7 +112,7 @@ var test = diacritics.getLanguage("test");
 // test => { "message": "Language 'test' was not found" }
 ```
 
-#### diacritics.getVariant(code)
+### diacritics.getVariant(code)
 
 Returns the metadata and data for the selected language variant code.
 
@@ -144,7 +144,7 @@ var test = diacritics.getVariant("test");
 // test => { "message": "Variant 'test' was not found" }
 ```
 
-#### diacritics.getAlphabet(code)
+### diacritics.getAlphabet(code)
 
 Returns the metadata and data for all languages matching the given alphabet code.
 
@@ -177,7 +177,7 @@ var test = diacritics.getAlphabet("test");
 // test => { "message": "Alphabet 'test' was not found" }
 ```
 
-#### diacritics.getContinent(code)
+### diacritics.getContinent(code)
 
 Returns the metadata and data for all languages matching the given continent code.
 
@@ -206,7 +206,7 @@ var test = diacritics.getContinent("test");
 // test => { "message": "Continent 'test' was not found" }
 ```
 
-#### diacritics.formatUnicode(string)
+### diacritics.formatUnicode(string)
 
 Converts the escaped unicode as stored within the database (`\\uHHHH` where H = hex) into actual unicode characters. Using `.replace(/\\\u/g, "\u")` will appear to work, but it does not create an actual unicode character; so we must use `.fromCharCode()` to properly convert the string.
 
@@ -220,9 +220,9 @@ var string = diacritics.formatUnicode("T\\u00E9st");
 // string => "Tést"
 ```
 
-### Data processing functions
+## Data processing functions
 
-#### diacritics.getDiacritics(string)
+### diacritics.getDiacritics(string)
 
 Returns the metadata and data for all matching diacritics within the string.
 
@@ -259,7 +259,7 @@ var test = diacritics.getDiacritics("test");
 // test => { "message": "No diacritics found" }
 ```
 
-#### diacritics.getBase(array)
+### diacritics.getBase(array)
 
 Returns the base data for the matching base value within the array.
 
@@ -297,7 +297,7 @@ var test = diacritics.getBase(["&"]);
 // test => { "message": "No matching bases found" }
 ```
 
-#### diacritics.getDecompose(array)
+### diacritics.getDecompose(array)
 
 Returns the decompose data for the matching decompose values within the array.
 
@@ -328,9 +328,9 @@ var test = diacritics.getDecompose(["&", "test"]);
 // test => { "message": "No matching decomposes found" }
 ```
 
-### Transliteration functions
+## Transliteration functions
 
-#### diacritics.transliterate(string [, type][, variant])
+### diacritics.transliterate(string [, type][, variant])
 
 Replaces diacritics within the string with either the base or decomposed value.
 
@@ -354,7 +354,7 @@ var unchanged = transliterate("¿abcñ-ß123?", "base", "test"); // "¿abcñ-ß1
 
 If no matching diacritics are found in the string or database, the original string is returned.
 
-#### diacritics.createRegExp(string [, options])
+### diacritics.createRegExp(string [, options])
 
 This function creates a regular expression that matches, or ignores, diacritics in the given `string`.
 
@@ -371,21 +371,159 @@ The function uses the following parameters:
 - The `string` parameter (type: `string`) contains text with or without diacritic characters to be processed into a regular expression that matches this value.
 - The `options` parameter (type: `object`) contains the following settings:
 
-  | Option             | Type     | Default | Description                      |
-  |--------------------|:--------:|:-------:|----------------------------------|
-  | diacritics         | boolean  | true    | When `true`, all diacritics from the `string` parameter are included; if `false`, all diacritics within the regular expression will be replaced with a <code>"\\\\S"</code> (set by the `replaceDiacritic` setting). |
-  | replaceDiacritic   | string   | "\\\\S"   | Character used to replace diacritics when the `diacritics` option is `false`. A range `{1,2}` is only added if the diacritic contains multiple characters (e.g. letter + combining diacritic(s)) and the `replaceDiacritic` option is set as <code>"\\\\S"</code> (e.g. `e\u0301` becomes <code>\\\\S{1,2}</code>. Make sure to double escape any regular expression special characters. |
-  | nonDiacritics      | boolean  | true    | When `true`, all non-diacritic characters from the `string` parameter are included; if `false`, non-diacritics are excluded so that only diacritics are targeted by the regular expression. |
-  | includeEquivalents | boolean  | true    | When `true`, all diacritic equivalents within the regular expression are included - e.g. &#xe9; (`\u00e9`) has an equivalent of `e` plus a combining diacritic (`e\u0301`); if `false`, only the diacritics from the `string` parameter are processed. |
-  | caseSensitive      | boolean  | true    | When `true`, case sensitive diacritics are matched; if `false`, both upper and lower case versions of the diacritic are included in the resulting regular expression. |
-  | ignoreJoiners      | boolean  | false   | When `true`, word joiners to match soft hyphens, zero width space, zero width non-joiner and zero width joiners are added between each character in the resulting regular expression. |
-  | flags              | string   | "gu"    | Flags to include when creating the regular expression. The "u" flag creates a [unicode-aware regular expression](https://mathiasbynens.be/notes/es6-unicode-regex).  |
-  | each               | function | null    | This callback function allows modification of the resulting regular expression string for the character currently being processed.<br>`function(character, result, data, index) { return result; }`<br>This callback has four parameters:<ul><li>The `character` parameter (type `string`) contains the current non-normalized character being processed (use `character.normalize("NFKC")` to make the character compatible with the database entry).</li><li>The `result` parameter (type `string`) contains the regular expression string equivalent of the current character (e.g. character `ü` may yield a result of `(\u00FC|u\u0308)`).</li><li>The `data` parameter (type `object`) contains the complete diacritic data object associated with the normalized regular expression `string` parameter (e.g. `{lang: {variant: {diacritic: {metadata: {...}, data: {...}}}}}`</li><li>The `index` parameter (type `number`) contains the current character index. This index matches the character position from the original regular expression `string` parameter.</li></ul>Return a string or a modified string that is to be used in the regular expression. Any falsy values that are returned will not be added to the final regular expression. |
-  | finalize           | function | null    | This callback function allows modification of the finalized regular expression string.<br>`function(array, joiner) { return array.join(joiner); }`<br>This callback has two parameters:<ul><li>The `array` parameter contains an array. Each array item is a string which results from the processing of the original `string` parameter after being split into separate characters; each item contains a diacritic (if `diacritics` is `true`), or non-diacritic (if `nonDiacritics` is `true`), but not both. And any special regular expression characters in the original `string` parameter will be escaped with a backslash (e.g. `^` is converted to `\^`).</li><li>The `joiner` parameter is a string which will be used to `.join()` the `array` parameter into its final regular expression string. When the `ignoreJoiners` option is `false`, this string is empty (`""`), and when the `ignoreJoiners` option is `true`, this string value becomes `"[\u00ad|\u200b|\u200c|\u200d]?"`.</li></ul>Return the final regular expression string once it has been created. |
+<table>
+  <thead>
+    <tr>
+      <th>Option
+      <th>Type
+      <th>Default
+      <th>Description
+  </thead>
+  <tbody>
+    <tr>
+      <td>diacritics
+      <td>boolean
+      <td>true
+      <td>When <code>true</code>, all diacritics from the <code>string</code>
+        parameter are included; if <code>false</code>, all diacritics within the
+        regular expression will be replaced with a <code>"\\S"</code>
+        (set by the <code>replaceDiacritic<code> setting).
+    <tr>
+      <td>replaceDiacritic
+      <td>string
+      <td>"\\S"
+      <td>Character used to replace diacritics when the <code>diacritics</code>
+        option is <code>false</code>. A range <code>{1,2}</code> is only added
+        if the diacritic contains multiple characters (e.g. letter + combining
+        diacritic(s)) and the <code>replaceDiacritic</code> option is set as
+        <code>"\\S"</code> (e.g. <code>e\u0301</code> becomes
+        <code>\\S{1,2}</code>. Make sure to double escape any regular
+        expression special characters.
+    <tr>
+      <td>nonDiacritics
+      <td>boolean
+      <td>true
+      <td>When <code>true</code>, all non-diacritic characters from the
+        <code>string</code> parameter are included; if <code>false</code>,
+        non-diacritics are excluded so that only diacritics are targeted by the
+        regular expression.
+    <tr>
+      <td>includeEquivalents
+      <td>boolean
+      <td>true
+      <td>When <code>true</code>, all diacritic equivalents within the regular
+        expression are included - e.g. &#xe9; (<code>\u00e9</code>) has an
+        equivalent of <code>e</code> plus a combining diacritic
+        (<code>e\u0301</code>); if <code>false</code>, only the diacritics from
+        the <code>string</code> parameter are processed.
+    <tr>
+      <td>caseSensitive
+      <td>boolean
+      <td>true
+      <td>When <code>true</code>, case sensitive diacritics are matched; if
+        <code>false</code>, both upper and lower case versions of the diacritic
+        are included in the resulting regular expression.
+    <tr>
+      <td>ignoreJoiners
+      <td>boolean
+      <td>false
+      <td>When <code>true</code>, word joiners to match soft hyphens, zero width
+        space, zero width non-joiner and zero width joiners are added between
+        each character in the resulting regular expression.
+    <tr>
+      <td>flags
+      <td>string
+      <td>"gu"
+      <td>Flags to include when creating the regular expression. The "u" flag
+        creates a
+        <a href="https://mathiasbynens.be/notes/es6-unicode-regex">
+          unicode-aware regular expression
+        </a>.
+    <tr>
+      <td>each
+      <td>function
+      <td>null
+      <td>This callback function allows modification of the resulting regular
+        expression string for the character currently being processed.
+        <pre>function(character, result, data, index) {
+    return result;
+}</pre>
+        This callback has four parameters:
+        <ul>
+          <li>
+            <code>character</code> parameter (type <code>string</code>)
+            contains the current non-normalized character being processed
+            (use <code>character.normalize("NFKC")</code> to make the character
+            compatible with the database entry).
+          </li>
+          <li>
+            <code>result</code> parameter (type <code>string</code>) contains
+            the regular expression string equivalent of the current character
+            (e.g. character <code>&#xFC;</code> may yield a result of
+            <code>(\u00FC|u\u0308)</code>).
+          </li>
+          <li>
+            <code>data</code> parameter (type <code>object</code>) contains the
+            complete diacritic data object associated with the normalized
+            regular expression <code>string</code> parameter, for example
+            <pre>{
+    lang: {
+        variant: {
+            diacritic: {
+                metadata: {...},
+                data: {...}
+            }
+        }
+    }
+}</pre>
+          </li>
+          <li>
+            <code>index</code> parameter (type <code>number</code>) contains the
+            current character index. This index matches the character position
+            from the original regular expression <code>string</code> parameter.
+          </li>
+        </ul>
+        Return a string or a modified string that is to be used in the regular
+        expression. Any falsy values that are returned will not be added to
+        the final regular expression.
+    <tr>
+      <td>done
+      <td>function
+      <td>null
+      <td>This callback function allows modification of the finalized regular
+        expression string.
+        <pre>function(array, joiner) {
+   return array.join(joiner);
+}</pre>
+        This callback has two parameters:
+        <ul>
+          <li>
+            <code>array</code> parameter contains an array. Each array item is
+            a string which results from the processing of the original
+            <code>string</code> parameter after being split into separate
+            characters; each item contains a diacritic (if
+            <code>diacritics</code> is <code>true</code>), or non-diacritic
+            (if <code>nonDiacritics</code> is <code>true</code>), but not both.
+            And any special regular expression characters in the original
+            <code>string</code> parameter will be escaped with a backslash (e.g.
+            <code>^</code> is converted to <code>\^</code>).
+          </li>
+          <li>
+            <code>joiner</code> parameter is a string which will be used to
+            <code>.join()</code> the <code>array</code> parameter into its final
+            regular expression string. When the <code>ignoreJoiners</code>
+            option is <code>false</code>, this string is empty
+            (<code>""</code>), and when the <code>ignoreJoiners</code> option is
+            <code>true</code>, this string value becomes
+            <code>"[\u00ad|\u200b|\u200c|\u200d]?"</code>.
+          </li>
+        </ul>
+        Return the final regular expression string once it has been created.
+</table>
 
 The returned value will be a regular expression that matches the processed string, or the original string if no diacritics are included.
 
-##### Examples &amp; comments:
+#### Examples &amp; comments:
 
 * Default settings
 
@@ -405,7 +543,7 @@ The returned value will be a regular expression that matches the processed strin
             // modify result as desired
             return result;
         },
-        finalize: function(array, joiner) {
+        done: function(array, joiner) {
             return array.join(joiner);
         }
     });
@@ -503,12 +641,12 @@ The returned value will be a regular expression that matches the processed strin
     // regexp => /a\s+t(\u00E9|e\u0301)st/gu
     ```
 
-* Finalize callback
+* Done callback
 
     ```js
     var diacritics = require("diacritics-transliterator");
     var regexp = diacritics.createRegExp("tést", {
-        finalize: function(array, joiner) {
+        done: function(array, joiner) {
             // match whole words only
             // make sure to double escape the RegExp special characters "\\b"
             return "\\b" + array.join(joiner) + "\\b";
@@ -519,14 +657,14 @@ The returned value will be a regular expression that matches the processed strin
 
 If no diacritics are found, then the regular expression will include the original text.
 
-##### __Important Notes__
+#### __Important Notes__
 
 * This method is not meant to be used on HTML, and will escape any regular expression-like characters (e.g. `^(test)$` string is converted into the following string `\^\(test\)\$`).
-* If you want to include the start `^` and end `$` anchors, use the `finalize` callback in a manner similar to the example above.
+* If you want to include the start `^` and end `$` anchors, use the `done` callback in a manner similar to the example above.
 * Any regular expression special characters added within the callback functions must be double escaped (e.g. `\S` becomes `\\S`) because the regular expression is created from a string.
 * Adding an escaped unicode character within the callbacks must not be double escaped (e.g. `\u00a0` contains a single backslash). If you have included any double escaped unicode as found in the database, use the [`diacritics.formatUnicode` method](#diacriticsformatunicodestring) to process it.
 
-#### diacritics.replacePlaceholder(string [, options])
+### diacritics.replacePlaceholder(string [, options])
 
 Replaces placeholder(s) within the string with the targeted diacritic values:
 - The `string` parameter (type: `string`)  contains text and/or HTML with a diacritic placeholder value(s) to be replaced.
@@ -565,11 +703,11 @@ var string = diacritics.replacePlaceholder("'u' is the base for '<% diacritics: 
 
 ---
 
-## Related
+# Related
 
 - [diacritics database](https://github.com/diacritics/database).
 - [diacritics API](https://github.com/diacritics/api).
 
-## [License](LICENSE)
+# [License](LICENSE)
 
 MIT © [Julian Motz](https://github.com/julmot) &amp; [Rob Garrison](https://github.com/Mottie)
