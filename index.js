@@ -570,20 +570,6 @@ module.exports.transliterate = (string, type = "base", variant) => {
  * @property {diacritics~createRegExpFinalize} [done]
  * @access private
  */
-function regExpOptions() {
-    return {
-        diacritics: true,
-        replaceDiacritic: "\\S",
-        nonDiacritics: true,
-        includeEquivalents: true,
-        caseSensitive: true,
-        ignoreJoiners: false,
-        flags: "gu",
-        // callbacks
-        each: null, // (character, result, data, index) => result
-        done: null  // (array, joiner) => array.join(joiner)
-    };
-}
 /**
  * Create regular expression to target the given string with or without
  * diacritics
@@ -595,7 +581,18 @@ function regExpOptions() {
  * @access public
  */
 module.exports.createRegExp = (string, options = {}) => {
-    options = Object.assign(regExpOptions(), options);
+    options = Object.assign({
+        diacritics: true,
+        replaceDiacritic: "\\S",
+        nonDiacritics: true,
+        includeEquivalents: true,
+        caseSensitive: true,
+        ignoreJoiners: false,
+        flags: "gu",
+        // callbacks
+        each: null, // (character, result, data, index) => result
+        done: null  // (array, joiner) => array.join(joiner)
+    }, options);
     let indx,
         regexp = [],
         array = [],
@@ -703,18 +700,12 @@ module.exports.createRegExp = (string, options = {}) => {
  * @property {diacritics~replacePlaceholderCallback} [output]
  * @access private
  */
-function placeholderOptions() {
-    return {
-        placeholder: "<% diacritics: {query} %>",
-        output: (placeholder, result) => result.join(",")
-    };
-}
 /**
  * Replaces placeholder(s) within the string with the targeted diacritic values.
  * The placeholder contains a query string
  * @param  {string} string - Text and/or HTML with a diacritic placeholder
  * value(s) to be replaced
- * @param  {diacritics~replacePlaceholderOptions} [opt] - Optional options
+ * @param  {diacritics~replacePlaceholderOptions} [options] - Optional options
  * object
  * @return {string} - processed string, or original string if no diacritics
  * found
@@ -726,8 +717,14 @@ function placeholderOptions() {
  * @access public
  */
 module.exports.replacePlaceholder = (string, options = {}) => {
-    options = Object.assign(regExpOptions(), options);
-    // to do
+    options = Object.assign({
+        placeholder: "<% diacritics: {query} %>",
+        output: (placeholder, result) => result.join(",")
+    }, options);
+    if(options.placeholder) {
+        // do something
+    }
+    return string;
 }
 
 /**
