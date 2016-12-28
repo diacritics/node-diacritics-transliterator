@@ -1,3 +1,9 @@
+/*!***************************************************
+ * node-diacritics-transliterator createRegExp tests
+ * http://diacritics.io/
+ * Copyright (c) 2016-2017, Julian Motz & Rob Garrison
+ * Released under the MIT license https://git.io/v1EBe
+ *****************************************************/
 import test from "ava";
 import d from "../index.js";
 
