@@ -1,15 +1,119 @@
 /*!***************************************************
  * node-diacritics-transliterator
  * http://diacritics.io/
- * Copyright (c) 2016, Julian Motz & Rob Garrison
+ * Copyright (c) 2016-17, Julian Motz & Rob Garrison
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
 "use strict";
 
 const databaseURL = "http://api.diacritics.io/",
-
     request = require("sync-request"),
-    regenerate = require("regenerate");
+    regenerate = require("regenerate"),
+    // valid API filters
+    validFilters = {
+        metadata: [
+            "alphabet",
+            "continent",
+            "language",
+            "variant",
+        ],
+        data: [
+            "base",
+            "decompose",
+            "diacritic"
+        ]
+    },
+    // cross-reference of database values starting from the language variant.
+    // Used by placeholder function
+    tree = {
+        "variant": {
+            parent: "[root]",
+            type: "object"
+        },
+        "metadata": {
+            parent: "variant",
+            type: "object"
+        },
+        "alphabet": {
+            parent: "metadata",
+            type: "string"
+        },
+        "continent": {
+            parent: "metadata",
+            type: "string"
+        },
+        "language": {
+            parent: "metadata",
+            type: "string"
+        },
+        "native": {
+            parent: "metadata",
+            type: "string"
+        },
+        "sources": {
+            parent: "metadata",
+            type: "array",
+            validEnd: true
+        },
+        "countries": {
+            parent: "metadata",
+            type: "array",
+            validEnd: true
+        },
+        "data": {
+            parent: "variant",
+            type: "object"
+        },
+        "diacritic": {
+            parent: "data",
+            type: "object"
+        },
+        "mapping": {
+            parent: "diacritic",
+            type: "object"
+        },
+        "base": {
+            parent: "mapping",
+            type: "string"
+        },
+        "decompose": {
+            parent: "mapping",
+            type: "string"
+        },
+        "equivalents": {
+            parent: "diacritic",
+            type: "array",
+            validEnd: false
+        },
+        // the following targets have an object as their parent, so this makes
+        // it difficult to add in the placeholder, so we'll just "assume"
+        // it's an array... "equivalents[1,2,3].raw";
+        // Also "raw" or "equivalents.raw" is the same as "equivalents[*].raw"
+        "raw": {
+            parent: "equivalents",
+            type: "string"
+        },
+        "unicode": {
+            parent: "equivalents",
+            type: "string"
+        },
+        "html_decimal": {
+            parent: "equivalents",
+            type: "string"
+        },
+        "html_hex": {
+            parent: "equivalents",
+            type: "string"
+        },
+        "encoded_uri": {
+            parent: "equivalents",
+            type: "string"
+        },
+        "html_entity": {
+            parent: "equivalents",
+            type: "string"
+        }
+    };
 
 /**
  * Support functions
@@ -276,17 +380,341 @@ function extractEquivalents(data, diacritic, options) {
 }
 
 /**
- * Escape regular expression characters inside of an array
- * @param {array} array
- * @return {array} - new array
+ * Convert a string with square brackets and comma-separated values into an
+ * array; return an array with any numbers parsed into numerical values
+ * @param  {string} string - a string containing internalized square brackets
+ * @return {array} - array containing strings and/or numeric values parsed into
+ * integers as they are expected to be used as an array index
+ * @example convertToArray("[1,2,3,a,b,c]"); => [1,2,3,"a","b","c"]
+ * @access private
+ */
+function convertToArray(string) {
+    if(string === "[]") {
+        return [];
+    }
+    return string
+        .replace(/[[\]]/g, "")
+        .trim()
+        .split(/\s*,\s*/)
+        .map(item => {
+            return isNaN(item) ? item : parseInt(item, 10);
+        });
+}
+
+/**
+ * @typedef {diacritics~validatePathReturn}
+ * @type {object.<(array, object, boolean)>}
+ * @property {string[]} path - the path in the database object from variant to
+ * result
+ * @property {object} xref - cross-reference of all path elements with any
+ * extracted & parsed values from the placeholder data string
+ * @property {number[]} filter - contains post-filtering numeric indexs to be
+ * applied to the final results; occurs immediately before the "done" callback
+ * is executed
+ * @property {boolean} valid - true if the path is valid
+ */
+/**
+ * Takes a placeholder data string & creates a `path` array using the defined
+ * tree & a `xref` object with any extracted values from the placeholder string
+ * @param  {string} string - placeholder data (from {data} filter;target)
+ * @return {diacritics~validatePathReturn}
+ * @example
+ * validatePath("equivalents[1,2].raw")
+ * @access private
+ */
+function validatePath(string) {
+    let parent, index, obj,
+        results = {
+            "valid": false,
+            "filters": []
+        },
+        valid = true,
+        path = [], // added to results if valid
+        xref = {}; // added to results if valid
+    if(!string) {
+        return {
+            message: "Cannot process an empty string"
+        };
+    }
+    // traverse path from final target, going up to [root], e.g.
+    // string = "equivalents[1,2].raw" results in
+    // path = ["raw", "equivalents", ..., "variant"]
+    // xref contains extracted values for every path item
+    // xref = {"raw":"raw", "equivalents":[1,2], ..., "variant":"variant"}
+    const parts = string.split(".").reverse(),
+        // test for [1,2,3] or [\u00FC,\u00DC]
+        extractArray = /([^[]+)?(\[.*\])?/,
+        isArray = /^\[.+\]$/,
+        extract = str => {
+            let result = { name: "", array: [] },
+                pts = str.match(extractArray);
+            if(pts) {
+                result.name = pts[1].toLowerCase();
+                // ignore "[*]" in placeholders
+                if(pts[2] && pts[2] !== "[*]") {
+                    result.array = convertToArray(
+                        // make all path elements lower case except
+                        // any set diacritic filters
+                        result.name === "diacritic" ?
+                            pts[2] :
+                            pts[2].toLowerCase()
+                    );
+                }
+            }
+            return result.name && result.name in tree ? result : {
+                message: `"${string}" (${result.name}) is not a valid path`
+            };
+        };
+    // check for post-filter definition
+    // e.g. equivalents[raw, unicode].[0,1,2] (post filter first 3 results)
+    obj = parts[0].match(extractArray);
+    if(obj && isArray.test(obj)) {
+        results.filters = convertToArray(obj[0]);
+        // remove post-filter from path
+        parts.shift();
+    }
+    obj = extract(parts[0]);
+    if(!obj || obj && obj.message) {
+        return obj && obj.message || {
+            message: `${string} is invalid`
+        };
+    }
+    // get initial (last) value in the path
+    if(obj.array && obj.array.length) {
+        xref[obj.name] = obj.array;
+    } else {
+        xref[obj.name] = obj.name;
+    }
+    path.push(obj.name);
+    parent = tree[obj.name] && tree[obj.name].parent;
+    // go up the path & validate; build path up from starting point using
+    // the defined tree
+    index = 0;
+    while(
+        typeof parent !== "undefined" &&
+        parent !== "[root]" &&
+        // limit iterations
+        index < 50
+    ) {
+        path.push(parent);
+        xref[parent] = parent;
+        parent = tree[parent] && tree[parent].parent;
+        index++;
+    }
+    path.reverse();
+    // Extract data from placeholder string while iterating down the tree
+    // the tree is stored in a `path` array & extracted data is saved to the
+    // `xref` object for cross-reference
+    parts.reverse().forEach(part => {
+        const obj = extract(part),
+            // ignore "[*]" placeholders
+            arry = obj.array && obj.array.length;
+        if(valid && (path.includes(obj.name) || arry)) {
+            if(arry) {
+                // if set to "diacritic[\u00FC].raw", make sure the array is set
+                // to the diacritic xref
+                xref[obj.name] = obj.array;
+            }
+        } else {
+            if(obj.message) {
+                console.error(obj.message);
+            }
+            valid = false;
+        }
+    });
+    // make sure target path is a string (invalid target)
+    obj = path[path.length - 1];
+    if(!tree[obj] || (tree[obj] && tree[obj].type !== "string")) {
+        if(tree[obj].type === "array" && tree[obj].validEnd) {
+            valid = true;
+        } else if(Array.isArray(xref[obj])) {
+            // check each array item & remove invalid entries
+            xref[obj] = xref[obj].filter((item, index, self) => {
+                if(
+                    // ignore numeric values
+                    (isNaN(item) && !tree[item]) ||
+                    // find item in tree
+                    (tree[item] &&
+                        (
+                            // type can be a string or array
+                            tree[item].type === "object" ||
+                            // must be a child of the path
+                            tree[item].parent !== obj
+                        )
+                    )
+                ) {
+                    return false;
+                }
+                return self.indexOf(item) === index;
+            });
+            // All filters were removed, remove the array
+            if(xref[obj].length === 0) {
+                xref[obj] = obj;
+                // check if the target node is an object and make it invalid
+                if(tree[obj].type === "object") {
+                    valid = false;
+                }
+            }
+        } else {
+            valid = false;
+        }
+    }
+    if(valid) {
+        results.xref = xref;
+        results.path = path;
+        results.valid = valid;
+        results.target = string;
+    }
+    return results;
+}
+
+/**
+ * @typedef {diacritics~extractPlaceholderReturn}
+ * @type {object[]} - an array is added to the object for each placeholder found
+ * @property {string} placeholder - placeholder to replace
+ * @property {string} type - The metadata or data filter type (e.g. "language")
+ * @property {string} code - The filter type value (e.g. "de")
+ * @property {string[]} path - path leading from variant to target data, e.g
+ * a "raw" target creates a path = [ "variant", "data", "diacritic",
+ * "equivalents", "equiv-index", "raw" ]
+ * @property {object} xref - The values extracted from the placeholder data;
+ * it is used as a cross-reference to path
+ * @property {boolean} valid - true if the path is valid
+ */
+/**
+ * Extract placeholder(s) settings from the string
+ * @param  {string} string - string content to be processed
+ * @param  {diacritics~replacePlaceholderOptions} [options] - Optional options
+ * @return {diacritics~extractPlaceholderReturn}
+ * @access private
+ */
+function extractPlaceholderSettings(string, options) {
+    let result = [],
+        // escape special RegExp characters
+        str = escapeRegExp(options.placeholder.split(/\{\s*data\s*\}/i));
+    str.forEach((item, index) => {
+        // ignore whitespace inside the placeholder
+        str[index] = item.replace(/\s+/g, "\\s*");
+    });
+    const regexp = new RegExp(str.join("(.+?)"), "gumi"),
+        // match entire placeholder(s)
+        placeholders = string.match(regexp);
+    if(placeholders) {
+        placeholders.forEach((placeholder, index) => {
+            result[index] = {
+                type: false,
+                code: false,
+                filter: false,
+                valid: false,
+                placeholder: new RegExp(
+                    // create regular express for final replacement
+                    escapeRegExp(placeholder).replace(/\s+/g, "\\s*"),
+                    "i"
+                ),
+            };
+            // see http://stackoverflow.com/q/1520800/145346
+            regexp.lastIndex = 0;
+            const opt = regexp.exec(placeholder);
+            if(opt && opt[1]) {
+                // extract data & process parts {filter;target}
+                opt[1].replace(/\s+/g, "").split(";").forEach((item, indx) => {
+                    let tmp;
+                    str = item.split("=");
+                    // the first item is the "filter" (e.g. decompose=u)
+                    // the second item is the "target" data (e.g. alphabet)
+                    if(indx === 0 && str) {
+                        // remove "/v1/?" route from filter
+                        // TODO: maybe this should set the version?
+                        tmp = (str[0] || "").replace(/\/v\d+\/\?/, "");
+                        if(
+                            matchInArray(validFilters.metadata, tmp) ||
+                            matchInArray(validFilters.data, tmp)
+                        ) {
+                            // double check (see first test, double nested
+                            // placeholder)
+                            tmp = tmp.toLowerCase().trim();
+                            if(
+                                validFilters.metadata.includes(tmp) ||
+                                validFilters.data.includes(tmp)
+                            ) {
+                                // e.g. "decompose=u" => type = "decompose"
+                                result[index].type = tmp;
+                            }
+                        }
+                        if(str[1]) {
+                            // e.g. "decompose=u" => code = "u"
+                            result[index].code = (str[1] || "").trim();
+                        }
+                    } else if(matchInArray(Object.keys(tree), item)) {
+                        str = validatePath(item);
+                        result[index].path = str.valid ? str.path : false;
+                        result[index].xref = str.valid ? str.xref : false;
+                        result[index].target = str.target;
+                        result[index].filters = str.filters;
+                    }
+                });
+            }
+            if(module.exports.debug.placeholder) {
+                console.log('placeholder extracted:\n', result[index]);
+            }
+            if(result[index].type && result[index].code && result[index].path) {
+                result[index].valid = true;
+            } else if(
+                // don't show error messages while testing - too much spam!
+                !module.exports.testing
+            ) {
+                str = result[index];
+                console.error(
+                    `Invalid placeholder data
+  ${placeholder}
+  type = ${str.type ? "valid (" + str.type + ")" : "invalid"}
+  code = ${str.code ? "valid (" + str.code + ")" : "invalid"}
+  target = ${str.target ? "valid (" + str.target + ")" : "invalid"}`
+                );
+            }
+        });
+    }
+    return result;
+}
+
+/**
+ * Return partial match index of an element in an array, e.g.
+ * matchInArray(['abc', 'def', 'ghi'], 'zzz.abc.123') => true;
+ * matchInArray(['abc', 'def', 'ghi'], 'def=z') => true
+ * matchInArray(['abc', 'def', 'ghi'], '[ghi]') => true
+ * @param  {array} array - an array of items
+ * @param  {string} string - a string to match inside the array
+ * @return {boolean} - true if found
+ */
+function matchInArray(array, string) {
+    let result = false;
+    array.forEach(item => {
+        if(!result) {
+            let partials = (string || "").toLowerCase().split(/[\W]/);
+            partials.forEach(segment => {
+                if(segment === item) {
+                    result = true;
+                }
+            });
+        }
+    });
+    return result;
+}
+
+/**
+ * Escape regular expression characters in a string or inside of an array
+ * @param {array|string} item
+ * @return {array|string} - new array or string
  * @access protected
  */
-function escapeRegExp(array) {
-    let result = [];
+function escapeRegExp(item) {
+    let result = [],
+        isString = typeof item === "string",
+        array = isString ? [item] : item;
     array.forEach((character, index) => {
         result[index] = character.replace(/[$()*+\-.\/?[\\\]^{|}]/g, "\\$&");
     });
-    return result;
+    return isString ? result[0] : result;
 }
 
 /**
@@ -566,9 +994,8 @@ module.exports.transliterate = (string, type = "base", variant) => {
  * joiners are added between each character in the regular expression
  * @property {string} [flags="gu"] - Flags to include when creating the regular
  * expression
- * @property {diacritics~createRegExpCallback} [each]
- * @property {diacritics~createRegExpFinalize} [done]
- * @access private
+ * @property {diacritics~createRegExpCallback} [each=null]
+ * @property {diacritics~createRegExpFinalize} [done=null]
  */
 /**
  * Create regular expression to target the given string with or without
@@ -684,48 +1111,296 @@ module.exports.createRegExp = (string, options = {}) => {
 }
 
 /**
- * Callback used when replacing placeholders
- * @callback diacritics~replacePlaceholderCallback
+ * followPath variables
+ * @typedef diacritics~followPathVariables
+ * @type {object.<(array, object, string)>}
+ * @param {object} database - full returned database object
+ * @param {array}  path - path key from {diacritics~validatePathReturn},
+ * @param {object} xref - xref key from {diacritics~validatePathReturn}
+ * @param {string} joiner - joiner from {diacritics~replacePlaceholderOptions}
+ * @param {array} exclude - exclude from {diacritics~replacePlaceholderOptions}
+ * @param {diacritics~replacePlaceholderEachCallback} each
+ */
+/**
+ * Recursive function to get all placeholder results
+ * @param {object} database - subobject of the language database object
+ * @param {diacritics~followPathVariables} [vars]
+ * @return {array} - results array from {diacritics~followPathVariables}
+ * @access private
+ */
+function followPath(database, vars) {
+    let val = {
+        results: [],
+        // filters added for the special case of equivalents[1,2]
+        // which filters the final result
+        filters: []
+    };
+    const saveValue = (obj, key) => {
+            let value = typeof obj === "string" ? obj : obj[key];
+            if(typeof vars.each === "function") {
+                value = vars.each(database, obj, key);
+            }
+            // allow "source", "continent" & "country" to be combined
+            if(Array.isArray(value) && tree[key].validEnd) {
+                value = value.join(vars.joiner);
+            }
+            // don't include undefined or empty values
+            if(typeof value !== "undefined" && value !== "") {
+                val.results.push(value);
+            }
+        },
+        getVals = (obj, keys) => {
+            if(obj && Array.isArray(keys)) {
+                keys.forEach(item => {
+                    // obj is a string when the database contains a string
+                    // instead of an array (e.g. continent)
+                    saveValue(obj, item);
+                });
+            } else if(
+                obj &&
+                (typeof obj[keys] === "string" || Array.isArray(obj[keys]))
+            ) {
+                saveValue(obj, keys);
+            }
+        };
+    if(vars.path.includes("metadata")) {
+        // handle metadata; e.g. variant[].metadata[]
+        extractData(database, "metadata", params => {
+            let obj,
+                indx = vars.path.indexOf("metadata"),
+                xref = vars.xref.variant,
+                tmp = Array.isArray(xref);
+            // handle variant[].metadata.. and variant.metadata...
+            if(
+                // placeholder variant array overrides the exclude option
+                (tmp && xref.includes(params.variant)) ||
+                // no placeholder variant array & variant not excluded
+                (!tmp && !vars.exclude.includes(params.variant))
+            ) {
+                obj = database[params.variant];
+                // handle metadata[]
+                getVals(obj.metadata, vars.xref.metadata, indx);
+                indx++;
+                tmp = vars.path[indx];
+                // handle metadata keys
+                getVals(obj.metadata, vars.xref[tmp], indx);
+                // handle continent[], source[]
+                tmp = vars.path[indx];
+                if(tmp) {
+                    getVals(obj.metadata[tmp], vars.xref[tmp], indx);
+                }
+            }
+        });
+    } else {
+        // handle data, e.g. variant[].data.diacritic[].mapping[] and
+        // variant[].data.diacritic[].equivalents[]
+        extractData(database, "data", params => {
+            let obj, path, filter,
+                indx = vars.path.indexOf("data"),
+                xref = vars.xref.variant,
+                tmp = Array.isArray(xref);
+            // handle variant[].data.. and variant.data...
+            if(
+                // placeholder variant array overrides the exclude option
+                (tmp && xref.includes(params.variant)) ||
+                (
+                    // no placeholder variant array & variant not excluded
+                    !tmp &&
+                    !vars.exclude.includes(params.variant) &&
+                    // and diacritic not excluded
+                    !vars.exclude.includes(params.diacritic)
+                )
+            ) {
+                indx++; // set path to "diacritic"
+                tmp = Array.isArray(vars.xref.diacritic);
+                // handle diacritic[]
+                if(
+                    (
+                        // specific diacritics set
+                        tmp &&
+                        vars.xref.diacritic.includes(params.diacritic)
+                    // non-specific diacritics
+                    ) || !tmp
+                ) {
+                    obj = database[params.variant].data[params.diacritic];
+                    // handle mapping[] or equivalents[]
+                    path = vars.path[++indx]; // path to mapping or equivalents
+                    xref = vars.xref[path];
+                    if(path === "mapping") {
+                        tmp = vars.path[++indx]; // path to base or decompose
+                        xref = Array.isArray(xref) ? xref : vars.xref[tmp];
+                        getVals(obj.mapping, xref, indx);
+                    } else {
+                        // get final target (e.g. raw, unicode, etc)
+                        tmp = vars.path[indx + 1];
+                        // separate out any numeric values
+                        // equivalents[raw, unicode, 0, 1]
+                        filter = [];
+                        xref = (Array.isArray(xref) ? xref : []).filter(itm => {
+                            // separate out numbers; save to returned filters
+                            if(!isNaN(itm)) {
+                                // save numbered equivalents[] to val.filters...
+                                // as this filter is applied after all
+                                // equivalents have been obtained & duplicates
+                                // removed
+                                filter.push(parseInt(itm, 10));
+                                return false;
+                            }
+                            return true;
+                        });
+                        obj[path].forEach((item, indx) => {
+                            if(
+                                // no filter; include all equivalents
+                                !filter.length ||
+                                // filter defined; only include named values
+                                filter.length && filter.includes(indx)
+                            ) {
+                                if(xref.length) {
+                                    xref.forEach(elm => {
+                                        if(item[elm]) {
+                                            saveValue(item, elm);
+                                        }
+                                    });
+                                }
+                                if(item[tmp]) {
+                                    saveValue(item, tmp);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    }
+    return val;
+}
+
+/**
+ * Callback used while iterating through each data result
+ * @callback diacritics~replacePlaceholderEachCallback
+ * @param {diacritic~extractDataProcessing}
+ * @param {object} data - data result for the filter;target query
+ * @param {array} target - data targeted to include in the placeholder
+ * @return {string} - specific data to include in the placeholder
+ */
+/**
+ * Callback used to finalize the data which will replace the placeholder
+ * @callback diacritics~replacePlaceholderFinalizeCallback
  * @param {string} placeholder - current placeholder string being processed
  * @param {array} result - resulting processed data as an array. For example, if
  * the placeholder
  * @return {string} - string used to replace the placeholder
  */
 /**
- * Replaces placeholders options
+ * replacePlaceholder options
  * @typedef diacritics~replacePlaceholderOptions
  * @type {object.<string>}
- * @property {string} [placeholder="<% diacritics: {query} %>"] - template of
+ * @property {string} [placeholder="<% diacritics: {data} %>"] - template of
  * placeholder to target within the string
- * @property {diacritics~replacePlaceholderCallback} [output]
+ * @property {string[]} [exclude=[]] - array of specific languages or diacritics
+ * to exclude
+ * @property {string} [joiner=", "] - string used to join the result array; but
+ * only useful if the `done` callback function is not defined
+ * @property {diacritics~replacePlaceholderEachCallback} [each]
+ * @property {diacritics~replacePlaceholderFinalizeCallback} [done]
  * @access private
  */
 /**
  * Replaces placeholder(s) within the string with the targeted diacritic values.
- * The placeholder contains a query string
+ * The placeholder contains a data string
  * @param  {string} string - Text and/or HTML with a diacritic placeholder
  * value(s) to be replaced
- * @param  {diacritics~replacePlaceholderOptions} [options] - Optional options
- * object
- * @return {string} - processed string, or original string if no diacritics
- * found
+ * @param  {diacritics~replacePlaceholderOptions} [options] - user set options
+ * @return {string} - processed string, or original string if no placeholder, or
+ * an invalid placeholder is found
  * @example The `<% diacritics: base=o;equivalents.unicode %>` placeholder will
- * be replaced with `\\u00FC,u\\u0308,\\u00FA,u\\u0301` - this example is only
- * showing the results from `de` and `es` languages; there will be a lot more
- * once there is more data. The result can be reformatted using the `each`
+ * be replaced with `\\u00FC, u\\u0308, \\u00FA, u\\u0301` - this example is
+ * only showing the results from `de` and `es` languages; there will be a lot
+ * more once there is more data. The result can be reformatted using the `each`
  * callback function.
  * @access public
  */
 module.exports.replacePlaceholder = (string, options = {}) => {
     options = Object.assign({
-        placeholder: "<% diacritics: {query} %>",
-        output: (placeholder, result) => result.join(",")
+        placeholder: "<% diacritics: {data} %>",
+        exclude: [],
+        joiner: ", ",
+        // callbacks
+        each: null, // (data, target) => data[target]
+        done: null  // (placeholder, result) => result.join(", ")
     }, options);
-    if(options.placeholder) {
-        // do something
-    }
+    extractPlaceholderSettings(string, options).forEach(placeholder => {
+        if(placeholder.valid) {
+            let database, results, val,
+                tmp = placeholder.type;
+            // query database stuff first
+            if(tmp === "diacritic") {
+                // get diacritics data
+                database = module.exports.getDiacritics(placeholder.code);
+            } else if(tmp === "base" || tmp === "decompose") {
+                // get base or decompose data from database or cache
+                database = getProcessed(tmp, [placeholder.code]);
+            } else {
+                // get language, alphabet or continent data
+                database = getVariants(tmp, placeholder.code);
+            }
+            if(database && database.message) {
+                if(module.exports.debug.placeholder) {
+                    console.log(database.message, placeholder);
+                }
+                return;
+            }
+            // travel down the database & get target value
+            tmp = followPath(
+                database,
+                // combine essential data for the followPath function
+                {
+                    database: database,
+                    path: placeholder.path,
+                    xref: placeholder.xref,
+                    each: options.each,
+                    exclude: options.exclude,
+                    joiner: options.joiner
+                }
+            );
+            // keep only unique values
+            results = tmp.results.filter((value, index, self) => {
+                return self.indexOf(value) === index;
+            });
+            if(results.length) {
+                // apply any post-filtering, if defined
+                if(placeholder.filters && placeholder.filters.length) {
+                    val = results.filter((value, index) => {
+                        return isNaN(index) ?
+                            value :
+                            placeholder.filters.includes(index);
+                    });
+                    results = val;
+                }
+                if(typeof options.done === "function") {
+                    results = options.done(results);
+                }
+                if(Array.isArray(results)) {
+                    results = results.join(options.joiner);
+                }
+                string = (string || "")
+                    .split(placeholder.placeholder)
+                    .join(results);
+            }
+        }
+    });
     return string;
 }
+
+/**
+ * Expose private functions for testing
+ * @access public
+ */
+module.exports.testMode = () => {
+    module.exports.testing = {
+        extractPlaceholderSettings: extractPlaceholderSettings
+    }
+};
 
 /**
  * Internal cache to prevent duplicate calls to the API

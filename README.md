@@ -666,22 +666,257 @@ If no diacritics are found, then the regular expression will include the origina
 
 ### diacritics.replacePlaceholder(string [, options])
 
-Replaces placeholder(s) within the string with the targeted diacritic values:
-- The `string` parameter (type: `string`)  contains text and/or HTML with a diacritic placeholder value(s) to be replaced.
-  - The query string contains two parts: `type;data`
-  - The `type` will match the diacritics.io database queries (e.g. `base=o`)
-  - The `data` will target the data to include (e.g. `alphabet`, `native`, `base`, `decompose` or `equivalents.unicode`) - including `metadata` or `data` is not required.
-  - Example: `<% diacritics: base=o;equivalents.unicode %>` will be replaced with `\u00FC,u\u0308,\u00FA,u\u0301` - this example is only showing the results from `de` and `es` languages; there will be a lot more once there is more data. The result can be reformatted using the `output` callback function.
-- The `options` parameter contains the following settings:
-  - `placeholder` - (type: `string`) format defaults to `<% diacritics: {query} %>`.
-  - `output` - (type: `function`) function to allow customization of the output string: `function(placeholder, result) { return result.join(""); }`
+Replaces one or more placeholders within the given string with the targeted diacritic values:
 
-The returned value will be a `string` (converted from an array by the `output` callback) containing unique diacritic that match the query string values - all duplicates are removed.
+#### `string`
+
+The `string` parameter (type: `string`) contains text and/or HTML with one or more diacritic placeholders to be replaced.
+
+The default placeholder is set as `<% diacritics: {data} %>`.
+
+The `{data}` portion of the placeholder contains two parts separated by a semi-colon: `filter;target`
+
+Any spaces within the placeholder, including the `{data}` portion, are ignored.
+
+Given the following placeholder:
+
+```
+<% diacritics: base = u; decompose %>
+```
+
+The `filter` is set as `base=u` and the `target` is set as `decompose`.
+
+##### `filter`
+
+The `filter` portion will be used as the diacritics.io database filter query (e.g. `base=u`).
+
+The version route and query string indicator (e.g. the `/v1/?` in the full filter parameter `/v1/?base=u`) are not required. If included in the filter, it will be ignored as this method will always use the latest version.
+
+A full list of valid api filters can be found in the [diacritics API specification](https://github.com/diacritics/api/tree/master/spec).
+
+##### `target`
+
+The `target` sets the destination value or values to be used when replacing the placeholder (e.g. `base` or `decompose`).
+
+The data tree structure is as follows:
+
+```
+              _ {metadata}[]
+             |            |__ "alphabet"
+             |            |__ "language"
+             |            |__ "native"
+             |            |__ [continent][]
+             |            |__ [country][]
+ {variant}[]_|            |__ [source][]
+             |
+             |_ {data}__ {diacritic}[]__ {mapping}[]
+                                    |             |__ "base"
+                                    |             |__ "decompose"
+                                    |
+                                    |__ [equivalents][{}]
+                                                      |__ "encoded_uri"
+                                                      |__ "html_decimal"
+                                                      |__ "html_entity"
+                                                      |__ "html_hex"
+                                                      |__ "raw"
+                                                      |__ "unicode"
+```
+
+The `variant` and `diacritic` node names are _symbolic representations_ of the data contained within their respective nodes; they are not actually named in the data tree structure.
+
+###### Tree item types
+
+In the diagram above, nodes are wrapped with different symbols to indicate their type:
+
+* Curly brackets are objects, e.g. `{variant}`.
+* Square brackets are arrays, e.g. `[source]`.
+* Quotes are strings, e.g. `"alphabet"`.
+
+Do not include these wrapping symbols in the placeholder data target!
+
+###### Target path
+
+Valid end target nodes:
+
+* Set the data target to a node with a string value.
+* In certain cases, the target may be set to an array node, as when targeting the `continent`, `country` or `source` nodes. In these cases, all array items are included and combined using the string set in the `joiner` option.
+* When setting a target, only the last node (of either string or array type) is necessary. For example, all of the following target path settings are equivalent:
+
+   ```
+   language
+   metadata.language
+   variant.language
+   variant.metadata.language
+   variant .  language
+   metadata[language]
+   ```
+
+* Targeting an object node will result in _no modification_ of the placeholder, unless it has a filter set (e.g. `metadata[language]`).
+
+###### Tree path filters
+
+In the diagram above, node names followed by an array indicator (`[]`) signify a node that will accept a filter. The `equivalents` node has a special indicator (`[{}]`) because it is an array of object items, and can be filtered in a special way; this special case will be discussed below.
+
+Here are a some examples of placeholder data settings with filters:
+
+```
+alphabet=latn;variant[de,es].data.diacritic[&#x00FC;, &#x00FA;].equivalents[raw, unicode, html_hex]
+language=de;metadata[language, native]
+base=u;equivalents.unicode.[0,2]
+```
+
+In general:
+
+* Only object and array nodes may be filtered.
+* Single or multiple filters may be included, and multiple entries must be separated by a comma.
+* Spaces within the filters are ignored.
+* Invalid or non-existent filters are ignored.
+* If a filter contains all invalid entries, no results will be found and the original string will be returned.
+* Multiple results will be joined using the string set in the `joiner` option; this method may be altered by the `done` callback function.
+
+Filters are set depending on the node type and data:
+
+* Symbolic object node filters:
+  * The `variant` and `diacritic` nodes are symbolic representations of the data within the node.
+  * These filters are set to match database results. If the database does not provide a match, then the filter is ignored.
+  * In the example, the variant filter is set with `de,es`. The resulting data will only include the language variants "de" and "es"; but only if they exist in the provided data from the database.
+  * The diacritic filter is set with `&#x00FC;, &#x00FA;` and will further narrow the results to these specific diacritics.
+* Named object node filters:
+  * The `metadata` and `equivalents` node filters will only accept immediate child nodes.
+  * For example, `metadata[language, native]` will include both the English named language and the native language name in the results.
+  * Setting `equivalents[raw, unicode, html_hex]` will include these named filters _for every equivalent diacritic_ in the result.
+* Named array node filters:
+  * The `continent`, `country`, `sources` and `equivalents` will only accept a numeric zero-based index.
+  * For example, `sources[0,1]` will only include the first two values in the results. If the second doesn't exist, the index is ignored.
+  * Nested filters __are not supported__, e.g. `metadata[source[0]]`.
+* `equivalents` node special case:
+  * The `equivalents` node contains an array of object data.
+  * Filters set for this node may be set to include both child nodes and numeric indexes.
+  * For example, if set to `equivalents[raw, unicode, html_hex, 0, 1]`, only the first and second (zero-based index) equivalent entries are targeted. Only the `raw`, `unicode` and `html_hex` values from those entries will be included in the result.
+* Result filtering:
+  * In the final example (`equivalents.unicode.[0,2]`), a result filter may be added to the end of the path.
+  * The result filter _must_ be preceeded by a period separating it from the target node.
+  * The filter only accepts zero-based index values.
+  * These settings are applied to the array of resulting data items, but only after any duplicate entries are removed.
+  * The filter is applied immediately before the `done` callback function.
+  * For example:
+    * A target set with `equivalents.unicode` would have the following result: `"\\u00FC, u\\u0308, \\u00FA, u\\u0301"`.
+    * Adding a `.[0,2]` result filter will limit the final result to `\\u00FC, \\u00FA`.
+
+#### `options`
+
+The replacePlaceholder `options` parameter contains the following settings:
+
+<table>
+  <thead>
+    <tr>
+      <th>Option
+      <th>Type
+      <th>Default
+      <th>Description
+  <tbody>
+    <tr>
+      <td>placeholder
+      <td>string
+      <td>"&lt;% diacritics: {data} %&gt;"
+      <td>The placeholder string template setting. The template must match the
+        format used in the string that is passed to this function. The matching
+        placeholder will be completely replaced by the results from the
+        database. The <code>{data}</code> portion must be included. It contains
+        the filter for data to obtain from the database, and sets the target
+        information to include in the results.
+   <tr>
+      <td>exclude
+      <td>array
+      <td>[ ]
+      <td>An array of specific variants and/or diacritics to be excluded from
+        the result.
+   <tr>
+      <td>joiner
+      <td>string
+      <td>", "
+      <td>String used to join the result array (<code>result.join("");</code>);
+        It is used if the <code>done</code> callback function is not defined, or
+        returns an array. And it is used when the target data is an array (e.g.
+        <code>source</code>) that is not modified by the <code>each</code>
+        callback function.
+   <tr>
+      <td>each
+      <td>function
+      <td>null
+      <td>This callback function allows the processing of each matching data
+        result.
+        <pre>function(diacriticData, data, target) {
+    return data[target];
+}</pre>
+      This callback has three parameters:
+      <ul>
+        <li>
+          <code>diacriticData</code> parameter (type <code>object</code>)
+          contains the complete diacritic data (both mapping &amp; equivalents)
+          for the current diacritic.
+        </li>
+        <li>
+          <code>data</code> parameter (type: <code>object</code> or
+          <code>array</code>) contains the parent node of the targeted result.
+          Combining this parameter with the <code>target</code> will provide the
+          resulting data (i.e. <code>data[target]</code>); The resulting data
+          will be either a string or an array. Modify and return the data as
+          desired.
+          <p>
+          For example, this parameter may be the <code>metadata</code> object
+          and the <code>target</code> may be set to <code>source</code>
+          providing an array to manipulate. Or, this parameter may be an item
+          from the <code>equivalents</code> array (an object) with the target
+          set to <code>unicode</code> providing a string to manipulate.
+        </li>
+        <li>
+          <code>target</code> parameter (type: <code>string</code>) contains the
+          target key (e.g. <code>base</code> or <code>unicode</code>) such that
+          you will always be able to use <code>data[target]</code> to get the
+          intended result.
+        </li>
+      </ul>
+      Return a modified string or array to be used in the placeholder result.
+      Returning a falsy value (e.g. an empty string) will indicate that the
+      value should not be included in the result.
+   <tr>
+      <td>done
+      <td>function
+      <td>null
+      <td>Function to allow customization of the output string.
+        <pre>function(result) {
+    return result.join("");
+}</pre>
+        The <code>result</code> parameter:
+        <ul>
+          <li>Will only contain unique values.</li>
+          <li>If a result filter has been defined in the query (e.g.
+            <code>equivalents.raw.[0,1]</code>), then the <code>result</code>
+            array will only contain those specific results, i.e. the filter
+            will already be applied to the results.
+          </li>
+          <li>If the returned value is an array, it will be automatically be
+            combined into a <code>string</code> using the <code>joiner</code>
+            option. Return a string if you want to combine the array in a
+            different manner.
+          </li>
+      </ul>
+</table>
+
+#### Example
 
 ```js
 var diacritics = require("diacritics-transliterator");
-var string = diacritics.replacePlaceholder("'u' is the base for '<% diacritics: base=u;equivalents.html_hex %>'", {
-    output: function(placeholder, result) {
+var string = diacritics.replacePlaceholder("'u' is the base for '<!-- diacritics: base=u;equivalents.html_hex -->'", {
+    placeholder: "<!-- diacritics: {data} -->"
+    each: function(data, target) {
+        // choose specific data to return
+        return data[target];
+    },
+    // used to .join() the result if the done function is not defined
+    joiner: ", ",
+    done: function(placeholder, result) {
         // modify result as desired
         return result.join(", ");
     }
@@ -694,7 +929,7 @@ To convert escaped unicode (e.g. `\\u00FC`) into actual unicode, use the [`diacr
 ```js
 var diacritics = require("diacritics-transliterator");
 var string = diacritics.replacePlaceholder("'u' is the base for '<% diacritics: base=u;equivalents.unicode %>'", {
-    output: function(placeholder, result) {
+    done: function(placeholder, result) {
         return diacritics.formatUnicode(result.join(", "));
     }
 });
