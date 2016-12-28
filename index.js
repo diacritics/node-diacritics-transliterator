@@ -134,7 +134,6 @@ function getCurrentVersion() {
         current = major > 1 ? major : 1;
     }
     module.exports.currentVersion = "v" + current;
-    // make readonly?... modified in test.js for testing
     module.exports.maxVersion = current;
 }
 
