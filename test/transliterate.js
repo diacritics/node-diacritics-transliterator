@@ -32,7 +32,6 @@ test("Transliterate", t => {
         const error = t.throws(() => {
             d.transliterate("¿abcñ-ß123?", type, variant);
         }, Error);
-     console.log(error.message);
         t.is(error.message, "Invalid 'type'");
     }
     invalidType("test", "de");
