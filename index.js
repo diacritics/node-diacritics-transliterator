@@ -1,7 +1,7 @@
 /*!***************************************************
  * node-diacritics-transliterator
  * http://diacritics.io/
- * Copyright (c) 2016-17, Julian Motz & Rob Garrison
+ * Copyright (c) 2016–2017, Julian Motz & Rob Garrison
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
 "use strict";
