@@ -977,7 +977,7 @@ var string = diacritics.replacePlaceholder("'u' is the base for '<% diacritics: 
 
 # Related
 
-- [diacritics database](https://github.com/diacritics/database) – a database to map diacritics with their associated ASCII characters.
-- [diacritics API](https://github.com/diacritics/api) – an API for the diacritics database..
+- [diacritics database](https://github.com/diacritics/database) – the database behind node-transliterator.
+- [diacritics API](https://github.com/diacritics/api) – the API for the diacritics database.
 
 # [License](LICENSE)
