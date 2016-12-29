@@ -18,4 +18,54 @@ After you have contributed something check your code by using:
 $ npm run linting | npm test
 ```
 
+## Debugging
+
+Included in the modules is some basic debugging logs. You can set each of these individually to target the log of interest:
+
+```js
+var diacritics = require("diacritics-transliterator");
+diacritics.debug = {
+    server: true, // show server & cache interactions
+    regexp: true, // show resulting regular expressions
+    regexpTests: true, // show all regular expression tests
+    placeholder: true // show string breakdown and results
+};
+diacritics.getVariant("de");
+// logged as: "http://api.diacritics.io/v1/?language=de; response: loaded"
+diacritics.getVariant("de");
+// logged as: "http://api.diacritics.io/v1/?language=de; {loaded from cache}"
+```
+
+All debugging messages are disabled by default.
+
+Debug messages can be enabled for `npm test` by modifying these settings within the `test/setting.json` file.
+
+### server
+
+When `diacritics.debug.server` is `true`:
+
+- The url used to access diacritics.io will be logged as well as a message stating if the data was "loaded" from the server, or "loaded from cache" referring to previously loaded data stored in an internal cache.
+- A response `statusCode` will be displayed for any server errors (e.g. `404`).
+
+### regexp and regexpTests
+
+- When `diacritics.debug.regexp` is `true`, the resulting Regular Expression for the given string will be logged along with the set options.
+- When `diacritics.debug.regexpTests` is `true`, only the results of the unit tests contained in the `test/regexp.js` file will be logged.
+  - This output shows the resulting regular expression, the tested string and result.
+  - The output is formatted as follows: `/regexp/gu.test("test-string") {boolean}`
+
+### placeholder
+
+When `diacritics.debug.placeholder` is `true`:
+
+- Any database message returned from diacritics.io will be logged along with the associated placeholder
+- Once a placeholder has been processed an object with the following data will be logged:
+  - `type` – Extracted database filter (e.g. `language`)
+  - `code` – Extracted database filter query (e.g. `de`)
+  - `filter` – Array of result filters to apply to the resulting data; applied immediately before the `done` callback.
+  - `valid` – Boolean value indicating if the diacritic data settings are valid, or not.
+  - `placeholder` – Regular expression matching the specific placeholder.
+  - `path` – Array of tree nodes starting with `variant` and ending with the set target.
+  - `xref` – Object used to cross-reference the `path` nodes with data extracted from the placeholder. Values are set as an array if the placeholder includes a filter for a node, otherwise a string matching the node name is set as the key if no special handling is required.
+
 [node-js]: https://nodejs.org/en/

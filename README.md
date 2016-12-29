@@ -4,7 +4,7 @@
 
 # Installation
 
-```console
+```bash
 $ npm install diacritics-transliterator
 ```
 
@@ -55,14 +55,9 @@ Upon initialization, this module is set to the latest major release version of t
 
 The `version` parameter (`string` or `number`) will accept the following values:
 
-- `v#`, where `v` is the abbreviation for "version" and `1` is the major release value.
-- `1`, where `1` is a numeric value or string.
+- v#`, where `v` is the abbreviation for "version" and `#` is the database major version release value (e.g. `1`).
+- `#` may be set as a numeric value or string.
 - Parsed values must be greater than zero and less than or equal to the current major release version.
-
-```js
-var diacritics = require("diacritics-transliterator");
-diacritics.setVersion("v1"); // "v1" returned
-```
 
 Invalid values will be ignored and the version will remain unchanged.
 
@@ -118,8 +113,10 @@ Returns the metadata and data for the selected language variant code.
 
 The `code` parameter (type: `string`) will accept any of the following case insensitive values:
 
-- language variant code (e.g. `de`)
-- The language variant name written in English.
+- language variant code (e.g. `de`).
+  - This code is based on the [IETF language tag](https://www.w3.org/International/articles/language-tags/) extended language (`extlang`) subtag. So, _if_ you want to target the `de_AT` variant, only include the `AT` subtag. In this case, the `AT` variant does not differ from the root `DE` language, so the variant will not be found in the database.
+  - See [this table](http://data.okfn.org/data/core/language-codes#resource-ietf-language-tags) for a quick reference of available IETF language tags.
+- The language variant name written in plain English.
 
 The returned value will be an object which includes only the variant language.
 
@@ -263,7 +260,7 @@ var test = diacritics.getDiacritics("test");
 
 Returns the base data for the matching base value within the array.
 
-The `array` parameter contains either an `array` of diacritic base string, or a `string` containing a single base (internally converted into an array), of characters to process.
+The `array` parameter contains either an `array` of diacritic base string, or a `string` containing a single base, of characters to process.
 
 The returned value will be an object containing all languages that match each diacritic base value, but the language data will only contain the matching diacritic.
 
@@ -335,16 +332,23 @@ var test = diacritics.getDecompose(["&", "test"]);
 Replaces diacritics within the string with either the base or decomposed value.
 
 - The `string` parameter (type: `string`) will replace any diacritic characters with base or decomposed values. Any non-diacritics characters will not be modified.
-- The `type` parameter (type: `string`) is set to either "base" or "decompose". Defaults to "base". If a "base" value is not found, a "decompose" value will be used instead; and vice-versa.
+- The `type` parameter (type: `string`) is set to either "base" or "decompose".
+  - It defaults to "base".
+  - If a "base" value is set and is not found, the "decompose" value will be used instead.
+  - If a "decompose" value is set and is not found, it will fallback to the "base" value.
 - The `variant` optional parameter (type: `string`) is set using the language variant. If no variant is provided, the first matching language for the diacritic will be used.
 
 The returned value will be a string with all matching diacritics replaced with the set "base" or "decompose" value.
 
-**Note** that if a `variant` parameter is set and the string contains a diacritic not found in that language variant, it will not be processed!
+**Note**
+- An invalid `type` parameter will throw an error.
+- An invalid `variant` parameter or a set variant that does not include one or more diacritics in the string, will not process that diacritic.
 
 ```js
 var transliterate = require("diacritics-transliterator").transliterate;
+// only the German s-sharp is replaced
 var german = transliterate("¿abcñ-ß123?", "decompose" "de"); // "¿abcñ-ss123?"
+// only the Spanish ñ is modified
 var spanish = transliterate("¿abcñ-ß123?", "base", "es"); // "?abcn-ß123?"
 // The base of ß is still ß
 var generic = transliterate("¿abcñ-ß123?"); // "?abcn-ß123?"
@@ -374,24 +378,27 @@ The function uses the following parameters:
 <table>
   <thead>
     <tr>
-      <th>Option
-      <th>Type
-      <th>Default
-      <th>Description
+      <th>Option</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
   </thead>
   <tbody>
     <tr>
-      <td>diacritics
-      <td>boolean
-      <td>true
+      <td>diacritics</td>
+      <td>boolean</td>
+      <td>true</td>
       <td>When <code>true</code>, all diacritics from the <code>string</code>
         parameter are included; if <code>false</code>, all diacritics within the
         regular expression will be replaced with a <code>"\\S"</code>
         (set by the <code>replaceDiacritic<code> setting).
+      </td>
+    </tr>
     <tr>
-      <td>replaceDiacritic
-      <td>string
-      <td>"\\S"
+      <td>replaceDiacritic</td>
+      <td>string</td>
+      <td>"\\S"</td>
       <td>Character used to replace diacritics when the <code>diacritics</code>
         option is <code>false</code>. A range <code>{1,2}</code> is only added
         if the diacritic contains multiple characters (e.g. letter + combining
@@ -399,50 +406,62 @@ The function uses the following parameters:
         <code>"\\S"</code> (e.g. <code>e\u0301</code> becomes
         <code>\\S{1,2}</code>. Make sure to double escape any regular
         expression special characters.
+      </td>
+    </tr>
     <tr>
-      <td>nonDiacritics
-      <td>boolean
-      <td>true
+      <td>nonDiacritics</td>
+      <td>boolean</td>
+      <td>true</td>
       <td>When <code>true</code>, all non-diacritic characters from the
         <code>string</code> parameter are included; if <code>false</code>,
         non-diacritics are excluded so that only diacritics are targeted by the
         regular expression.
+      </td>
+    </tr>
     <tr>
-      <td>includeEquivalents
-      <td>boolean
-      <td>true
+      <td>includeEquivalents</td>
+      <td>boolean</td>
+      <td>true</td>
       <td>When <code>true</code>, all diacritic equivalents within the regular
-        expression are included - e.g. &#xe9; (<code>\u00e9</code>) has an
+        expression are included – e.g. &#xe9; (<code>\u00e9</code>) has an
         equivalent of <code>e</code> plus a combining diacritic
         (<code>e\u0301</code>); if <code>false</code>, only the diacritics from
         the <code>string</code> parameter are processed.
+      </td>
+    </tr>
     <tr>
-      <td>caseSensitive
-      <td>boolean
-      <td>true
+      <td>caseSensitive</td>
+      <td>boolean</td>
+      <td>true</td>
       <td>When <code>true</code>, case sensitive diacritics are matched; if
         <code>false</code>, both upper and lower case versions of the diacritic
         are included in the resulting regular expression.
+      </td>
+    </tr>
     <tr>
-      <td>ignoreJoiners
-      <td>boolean
-      <td>false
+      <td>ignoreJoiners</td>
+      <td>boolean</td>
+      <td>false</td>
       <td>When <code>true</code>, word joiners to match soft hyphens, zero width
         space, zero width non-joiner and zero width joiners are added between
         each character in the resulting regular expression.
+      </td>
+    </tr>
     <tr>
-      <td>flags
-      <td>string
-      <td>"gu"
+      <td>flags</td>
+      <td>string</td>
+      <td>"gu"</td>
       <td>Flags to include when creating the regular expression. The "u" flag
         creates a
         <a href="https://mathiasbynens.be/notes/es6-unicode-regex">
           unicode-aware regular expression
         </a>.
+      </td>
+    </tr>
     <tr>
-      <td>each
-      <td>function
-      <td>null
+      <td>each</td>
+      <td>function</td>
+      <td>null</td>
       <td>This callback function allows modification of the resulting regular
         expression string for the character currently being processed.
         <pre>function(character, result, data, index) {
@@ -486,10 +505,12 @@ The function uses the following parameters:
         Return a string or a modified string that is to be used in the regular
         expression. Any falsy values that are returned will not be added to
         the final regular expression.
+      </td>
+    </tr>
     <tr>
-      <td>done
-      <td>function
-      <td>null
+      <td>done</td>
+      <td>function</td>
+      <td>null</td>
       <td>This callback function allows modification of the finalized regular
         expression string.
         <pre>function(array, joiner) {
@@ -519,6 +540,9 @@ The function uses the following parameters:
           </li>
         </ul>
         Return the final regular expression string once it has been created.
+      </td>
+    </tr>
+  </tbody>
 </table>
 
 The returned value will be a regular expression that matches the processed string, or the original string if no diacritics are included.
@@ -670,7 +694,7 @@ Replaces one or more placeholders within the given string with the targeted diac
 
 #### `string`
 
-The `string` parameter (type: `string`) contains text and/or HTML with one or more diacritic placeholders to be replaced.
+The `string` parameter (type: `string`) contains text with one or more diacritic placeholders to be replaced.
 
 The default placeholder is set as `<% diacritics: {data} %>`.
 
@@ -810,80 +834,90 @@ The replacePlaceholder `options` parameter contains the following settings:
 <table>
   <thead>
     <tr>
-      <th>Option
-      <th>Type
-      <th>Default
-      <th>Description
+      <th>Option</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
   <tbody>
     <tr>
-      <td>placeholder
-      <td>string
-      <td>"&lt;% diacritics: {data} %&gt;"
+      <td>placeholder</td>
+      <td>string</td>
+      <td>"&lt;% diacritics: {data} %&gt;"</td>
       <td>The placeholder string template setting. The template must match the
         format used in the string that is passed to this function. The matching
         placeholder will be completely replaced by the results from the
         database. The <code>{data}</code> portion must be included. It contains
         the filter for data to obtain from the database, and sets the target
         information to include in the results.
-   <tr>
-      <td>exclude
-      <td>array
-      <td>[ ]
+      </td>
+    </tr>
+    <tr>
+      <td>exclude</td>
+      <td>array</td>
+      <td>[ ]</td>
       <td>An array of specific variants and/or diacritics to be excluded from
         the result.
-   <tr>
-      <td>joiner
-      <td>string
-      <td>", "
+      </td>
+    </tr>
+    <tr>
+      <td>joiner</td>
+      <td>string</td>
+      <td>", "</td>
       <td>String used to join the result array (<code>result.join("");</code>);
         It is used if the <code>done</code> callback function is not defined, or
         returns an array. And it is used when the target data is an array (e.g.
         <code>source</code>) that is not modified by the <code>each</code>
         callback function.
-   <tr>
-      <td>each
-      <td>function
-      <td>null
+      </td>
+    </tr>
+    <tr>
+      <td>each</td>
+      <td>function</td>
+      <td>null</td>
       <td>This callback function allows the processing of each matching data
         result.
         <pre>function(diacriticData, data, target) {
     return data[target];
 }</pre>
-      This callback has three parameters:
-      <ul>
-        <li>
-          <code>diacriticData</code> parameter (type <code>object</code>)
-          contains the complete diacritic data (both mapping &amp; equivalents)
-          for the current diacritic.
-        </li>
-        <li>
-          <code>data</code> parameter (type: <code>object</code> or
-          <code>array</code>) contains the parent node of the targeted result.
-          Combining this parameter with the <code>target</code> will provide the
-          resulting data (i.e. <code>data[target]</code>); The resulting data
-          will be either a string or an array. Modify and return the data as
-          desired.
-          <p>
-          For example, this parameter may be the <code>metadata</code> object
-          and the <code>target</code> may be set to <code>source</code>
-          providing an array to manipulate. Or, this parameter may be an item
-          from the <code>equivalents</code> array (an object) with the target
-          set to <code>unicode</code> providing a string to manipulate.
-        </li>
-        <li>
-          <code>target</code> parameter (type: <code>string</code>) contains the
-          target key (e.g. <code>base</code> or <code>unicode</code>) such that
-          you will always be able to use <code>data[target]</code> to get the
-          intended result.
-        </li>
-      </ul>
-      Return a modified string or array to be used in the placeholder result.
-      Returning a falsy value (e.g. an empty string) will indicate that the
-      value should not be included in the result.
-   <tr>
-      <td>done
-      <td>function
-      <td>null
+        This callback has three parameters:
+        <ul>
+          <li>
+            <code>diacriticData</code> parameter (type <code>object</code>)
+            contains the complete diacritic data (both mapping &amp;
+            equivalents) for the current diacritic.
+          </li>
+          <li>
+            <code>data</code> parameter (type: <code>object</code> or
+            <code>array</code>) contains the parent node of the targeted result.
+            Combining this parameter with the <code>target</code> will provide
+            the resulting data (i.e. <code>data[target]</code>); The resulting
+            data will be either a string or an array. Modify and return the data
+            as desired.
+            <p>
+            For example, this parameter may be the <code>metadata</code> object
+            and the <code>target</code> may be set to <code>source</code>
+            providing an array to manipulate. Or, this parameter may be an item
+            from the <code>equivalents</code> array (an object) with the target
+            set to <code>unicode</code> providing a string to manipulate.
+          </li>
+          <li>
+            <code>target</code> parameter (type: <code>string</code>) contains
+            the target key (e.g. <code>base</code> or <code>unicode</code>) such
+            that you will always be able to use <code>data[target]</code> to get
+            the intended result.
+          </li>
+        </ul>
+        Return a modified string or array to be used in the placeholder result.
+        Returning a falsy value (e.g. an empty string) will indicate that the
+        value should not be included in the result.
+      </td>
+    </tr>
+    <tr>
+      <td>done</td>
+      <td>function</td>
+      <td>null</td>
       <td>Function to allow customization of the output string.
         <pre>function(result) {
     return result.join("");
@@ -901,7 +935,10 @@ The replacePlaceholder `options` parameter contains the following settings:
             option. Return a string if you want to combine the array in a
             different manner.
           </li>
-      </ul>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
 </table>
 
 #### Example
@@ -940,9 +977,7 @@ var string = diacritics.replacePlaceholder("'u' is the base for '<% diacritics: 
 
 # Related
 
-- [diacritics database](https://github.com/diacritics/database).
-- [diacritics API](https://github.com/diacritics/api).
+- [diacritics database](https://github.com/diacritics/database) – a database to map diacritics with their associated ASCII characters.
+- [diacritics API](https://github.com/diacritics/api) – an API for the diacritics database..
 
 # [License](LICENSE)
-
-MIT © [Julian Motz](https://github.com/julmot) &amp; [Rob Garrison](https://github.com/Mottie)
