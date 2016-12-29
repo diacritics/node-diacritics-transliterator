@@ -903,6 +903,9 @@ module.exports.getDecompose = array => {
  * @access public
  */
 module.exports.transliterate = (string, type = "base", variant) => {
+    if(type !== "base" && type !== "decompose") {
+        throw new Error("Invalid 'type'");
+    }
     let result = string;
     const data = module.exports.getDiacritics(string),
         // non-normalized diacritic list

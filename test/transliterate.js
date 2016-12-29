@@ -24,8 +24,17 @@ test("Transliterate", t => {
     // the next two tests have equivalent results
     t.is(d.transliterate("¿abcñ-ß123?", "base"), "?abcn-ß123?");
     t.is(d.transliterate("¿abcñ-ß123?"), "?abcn-ß123?");
-    // no type or variant found, return original string
+    // no variant found, return original string
     t.is(d.transliterate("¿abcñ-ß123?", "base", "test"), "¿abcñ-ß123?");
-    t.is(d.transliterate("¿abcñ-ß123?", "test", "de"), "¿abcñ-ß123?");
-    t.is(d.transliterate("¿abcñ-ß123?", "test", "test"), "¿abcñ-ß123?");
+
+    // invalid type, throw error
+    function invalidType(type, variant) {
+        const error = t.throws(() => {
+            d.transliterate("¿abcñ-ß123?", type, variant);
+        }, Error);
+     console.log(error.message);
+        t.is(error.message, "Invalid 'type'");
+    }
+    invalidType("test", "de");
+    invalidType("test", "test");
 });
