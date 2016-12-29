@@ -27,7 +27,6 @@ var diacritics = require("diacritics-transliterator");
 diacritics.debug = {
     server: true, // show server & cache interactions
     regexp: true, // show resulting regular expressions
-    regexpTests: true, // show all regular expression tests
     placeholder: true // show string breakdown and results
 };
 diacritics.getVariant("de");
@@ -47,12 +46,9 @@ When `diacritics.debug.server` is `true`:
 - The url used to access diacritics.io will be logged as well as a message stating if the data was "loaded" from the server, or "loaded from cache" referring to previously loaded data stored in an internal cache.
 - A response `statusCode` will be displayed for any server errors (e.g. `404`).
 
-### regexp and regexpTests
+### regexp
 
 - When `diacritics.debug.regexp` is `true`, the resulting Regular Expression for the given string will be logged along with the set options.
-- When `diacritics.debug.regexpTests` is `true`, only the results of the unit tests contained in the `test/regexp.js` file will be logged.
-  - This output shows the resulting regular expression, the tested string and result.
-  - The output is formatted as follows: `/regexp/gu.test("test-string") {boolean}`
 
 ### placeholder
 

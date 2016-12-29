@@ -225,12 +225,6 @@ test("Create RegExp", t => {
             } else {
                 t.false(regexp.test(item[1]), item[2]);
             }
-            if (d.debug.regexpTests) {
-              console.log(
-                  `${decodeUnicode(regexp.toString())}` +
-                  `.test("${decodeUnicode(item[1])}")`,
-                  item[2]);
-            }
             // reset lastIndex or next test fails
             // see http://stackoverflow.com/q/1520800/145346
             regexp.lastIndex = 0;

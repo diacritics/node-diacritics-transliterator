@@ -1416,7 +1416,6 @@ module.exports.cache = {};
 module.exports.debug = {
     server: false, // show server & cache interactions
     regexp: false, // show resulting regular expressions
-    regexpTests: false, // show all regular expression tests
     placeholder: false // show string breakdown and results
 };
 

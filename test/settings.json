@@ -1,6 +1,5 @@
 {
     "server": false,
     "regexp": false,
-    "regexpTests": false,
     "placeholder": false
 }
