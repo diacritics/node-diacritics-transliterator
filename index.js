@@ -138,6 +138,36 @@ function getCurrentVersion() {
 }
 
 /**
+ * Checks if the input is a string
+ * @param {*} value - value to check the typeof
+ * @return {object|undefined}
+ */
+function checkString(value) {
+    let undefined;
+    if(typeof value !== "string") {
+        return {
+            message: "Error: Invalid input string"
+        };
+    }
+    return undefined;
+}
+
+/**
+ * Checks if the input is a string or array
+ * @param {*} value - value to check the typeof
+ * @return {object|undefined}
+ */
+function checkStringOrArray(value) {
+    let undefined;
+    if(typeof value !== "string" && !Array.isArray(value)) {
+        return {
+            message: "Error: Invalid input; use a string or array"
+        };
+    }
+    return undefined;
+}
+
+/**
  * Creates an API url to access a specific type of data
  * @param  {string} type - API filter type (e.g. "language", "variant", etc)
  * @param  {string} code - API filter query (e.g. "de", "Austria", etc)
@@ -214,6 +244,10 @@ function nextLayer(result) {
  * @access private
  */
 function getVariants(type, code) {
+    let error = checkString(code);
+    if(error) {
+        return error;
+    }
     const url = formatURL(type, code);
     if(type === "variant") {
         // just in case this function gets called for "variant"
@@ -755,6 +789,10 @@ module.exports.setVersion = version => {
  * @access public
  */
 module.exports.getVariant = code => {
+    let error = checkString(code);
+    if(error) {
+        return error;
+    }
     const url = formatURL("variant", code);
     if(module.exports.cache[url]) {
         // return cached variant
@@ -808,6 +846,10 @@ module.exports.getContinent = code => {
  * @access protected
  */
 module.exports.formatUnicode = string => {
+    const error = checkString(string);
+    if(error) {
+        return error;
+    }
     return (string || "").toString().replace(/\\\u(\w{4})/g, function(m, hex) {
         return String.fromCharCode(parseInt(hex, 16));
     });
@@ -824,10 +866,14 @@ module.exports.formatUnicode = string => {
  * @access public
  */
 module.exports.getDiacritics = string => {
+    let result = {},
+        error = checkString(string);
+    if(error) {
+        return error;
+    }
     // normalize string to use the same compatibilty-composed values contained
     // in the database
     string = string.normalize("NFKC");
-    let result = {};
     // get diacritic(s) from the string
     const diacritics = findDiacritics(string);
     if(diacritics) {
@@ -866,25 +912,31 @@ module.exports.getDiacritics = string => {
 
 /**
  * Get diacritic base data of selected character(s) from cache, or API
- * @param  {(string|string[])} array - A string of a single base string
- * (converted into an array), or an array of diacritic base string characters
- * to process
+ * @param  {(string|string[])} array - A string of a single base string or an
+ * array of diacritic base string characters to process
  * @return {object} - Base data for each diacritic base found or error message
  * @access public
  */
 module.exports.getBase = array => {
+    const error = checkStringOrArray(array);
+    if(error) {
+        return error;
+    }
     return getProcessed("base", array);
 }
 
 /**
  * Get diacritic decompose data of selected character(s) from cache, or API
- * @param  {(string|string[])} array - A string of a single decompose string
- * (converted into an array), or an array of diacritic decompose string
- * characters to process
+ * @param  {(string|string[])} array - A string of a single decompose string or
+ * an array of diacritic decompose string characters to process
  * @return {object} - Decompose data for each diacritic found or error message
  * @access public
  */
 module.exports.getDecompose = array => {
+    const error = checkStringOrArray(array);
+    if(error) {
+        return error;
+    }
     return getProcessed("decompose", array);
 }
 
@@ -903,10 +955,14 @@ module.exports.getDecompose = array => {
  * @access public
  */
 module.exports.transliterate = (string, type = "base", variant) => {
-    if(type !== "base" && type !== "decompose") {
-        throw new Error("Invalid 'type'");
+    let result = checkString(string);
+    if(result) {
+        return result;
     }
-    let result = string;
+    result = string;
+    if(type !== "base" && type !== "decompose") {
+        throw new Error("Error: Invalid 'type' value");
+    }
     const data = module.exports.getDiacritics(string),
         // non-normalized diacritic list
         diacritics = findDiacritics(string);
@@ -1010,6 +1066,11 @@ module.exports.transliterate = (string, type = "base", variant) => {
  * @access public
  */
 module.exports.createRegExp = (string, options = {}) => {
+    let indx, regexp, array, result,
+        error = checkString(string);
+    if(error) {
+        return error;
+    }
     options = Object.assign({
         diacritics: true,
         replaceDiacritic: "\\S",
@@ -1022,77 +1083,74 @@ module.exports.createRegExp = (string, options = {}) => {
         each: null, // (character, result, data, index) => result
         done: null  // (array, joiner) => array.join(joiner)
     }, options);
-    let indx,
-        regexp = [],
-        array = [],
-        result = options.caseSensitive ?
-            string :
-            string.toLowerCase() + string.toUpperCase();
+    regexp = [];
+    array = [];
+    result = options.caseSensitive ?
+        string :
+        string.toLowerCase() + string.toUpperCase();
     const data = module.exports.getDiacritics(result),
         // non-normalized diacritic list
         diacritics = findDiacritics(string, { regexp: true }),
-        matches = string.match(diacritics);
-    if(matches) {
-        array = escapeRegExp(Array.from(string));
-        array.forEach((character, index) => {
-            result = ""; // clear result!
-            const isDiacritic = matches.includes(character),
-                equivalents = options.includeEquivalents ?
-                extractEquivalents(data, character.normalize("NFKC"), options) :
-                [character];
-            if(options.diacritics && isDiacritic) {
-                if(equivalents.length > 1) {
-                    result = options.nonDiacritics ?
-                        `(${equivalents.join("|")})` :
-                        // if nonDiacritics is false; combine all matching
-                        // diacritics after processing; This adds a trailing
-                        // pipe that must be removed!!
-                        `${equivalents.join("|")}|`;
+        matches = string.match(diacritics) || [];
+    array = escapeRegExp(Array.from(string));
+    array.forEach((character, index) => {
+        result = ""; // clear result!
+        const isDiacritic = matches.includes(character),
+            equivalents = options.includeEquivalents ?
+            extractEquivalents(data, character.normalize("NFKC"), options) :
+            [character];
+        if(options.diacritics && isDiacritic) {
+            if(equivalents.length > 1) {
+                result = options.nonDiacritics ?
+                    `(${equivalents.join("|")})` :
+                    // if nonDiacritics is false; combine all matching
+                    // diacritics after processing; This adds a trailing
+                    // pipe that must be removed!!
+                    `${equivalents.join("|")}|`;
+            } else {
+                result = equivalents[0];
+            }
+        } else if(options.nonDiacritics) {
+            result = character;
+            // ignore diacritics
+            if(matches.includes(character)) {
+                indx = character.length;
+                if(options.includeEquivalents) {
+                    // find longest equivalent
+                    indx = 1;
+                    equivalents.forEach(equivalent => {
+                        indx = Math.max(indx, equivalent.length);
+                    });
+                }
+                if(options.replaceDiacritic === "\\S") {
+                    // "e\u0301" will be converted into "\\S{1,2}"
+                    result = options.replaceDiacritic +
+                        (indx > 1 ? `{1,${indx}}` : "");
                 } else {
-                    result = equivalents[0];
-                }
-            } else if(options.nonDiacritics) {
-                result = character;
-                // ignore diacritics
-                if(matches.includes(character)) {
-                    indx = character.length;
-                    if(options.includeEquivalents) {
-                        // find longest equivalent
-                        indx = 1;
-                        equivalents.forEach(equivalent => {
-                            indx = Math.max(indx, equivalent.length);
-                        });
-                    }
-                    if(options.replaceDiacritic === "\\S") {
-                        // "e\u0301" will be converted into "\\S{1,2}"
-                        result = options.replaceDiacritic +
-                            (indx > 1 ? `{1,${indx}}` : "");
-                    } else {
-                        result = options.replaceDiacritic;
-                    }
+                    result = options.replaceDiacritic;
                 }
             }
-            if(typeof options.each === "function") {
-                result = options.each(
-                    character,
-                    result,
-                    data,
-                    index
-                );
-            }
-            // don't add falsy values to regex
-            if(result) {
-                regexp.push(result);
-            }
-        });
-        if(options.diacritics && !options.nonDiacritics) {
-            // only diacritics are processed, wrap them all
-            regexp.unshift("(");
-            // remove trailing pipe
-            regexp[regexp.length - 1] = regexp[regexp.length - 1]
-                .replace(/\|$/, "");
-            regexp.push(")");
         }
+        if(typeof options.each === "function") {
+            result = options.each(
+                character,
+                result,
+                data,
+                index
+            );
+        }
+        // don't add falsy values to regex
+        if(result) {
+            regexp.push(result);
+        }
+    });
+    if(options.diacritics && !options.nonDiacritics) {
+        // only diacritics are processed, wrap them all
+        regexp.unshift("(");
+        // remove trailing pipe
+        regexp[regexp.length - 1] = regexp[regexp.length - 1]
+            .replace(/\|$/, "");
+        regexp.push(")");
     }
     result = regexp.length && options.ignoreJoiners ?
         "[\u00ad|\u200b|\u200c|\u200d]?" : "";
@@ -1105,8 +1163,8 @@ module.exports.createRegExp = (string, options = {}) => {
     }
     if(module.exports.debug.regexp) {
         console.log(
-            new RegExp(regexp, options.flags).toString(),
-            JSON.stringify(options).replace(/\s+/g, " ")
+            `"${string}" converted to RegExp => `,
+            new RegExp(regexp, options.flags).toString()
         );
     }
     return new RegExp(regexp, options.flags);
@@ -1323,6 +1381,10 @@ function followPath(database, vars) {
  * @access public
  */
 module.exports.replacePlaceholder = (string, options = {}) => {
+    const error = checkString(string);
+    if(error) {
+        return error;
+    }
     options = Object.assign({
         placeholder: "<% diacritics: {data} %>",
         exclude: [],
@@ -1416,6 +1478,7 @@ module.exports.cache = {};
 module.exports.debug = {
     server: false, // show server & cache interactions
     regexp: false, // show resulting regular expressions
+    regexpTests: false, // show all regular expression tests
     placeholder: false // show string breakdown and results
 };
 

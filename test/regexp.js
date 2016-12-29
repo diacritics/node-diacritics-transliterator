@@ -15,6 +15,15 @@ require("fs").readFile("test/settings.json", "utf8", (err, data) => {
 });
 
 const regexpTests = [{
+    // default settings; no diacritics
+    regexp: "Test",
+    options: {},
+    tests: [
+        [ "false", "T\u00E9st", "defaults; no diacritic matches" ],
+        [ "false", "Te\u0301st", "defaults; no diacritic combiner matches" ],
+        [ "false", "1234", "defaults; don't match everything"]
+    ]
+}, {
     // default settings
     regexp: "T\u00E9st",
     options: {}, // regexp options
@@ -229,6 +238,10 @@ test("Create RegExp", t => {
             // see http://stackoverflow.com/q/1520800/145346
             regexp.lastIndex = 0;
         });
+    });
+    // invalid string
+    t.deepEqual(d.createRegExp(1234), {
+        message: "Error: Invalid input string"
     });
 });
 

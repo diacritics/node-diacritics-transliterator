@@ -55,24 +55,26 @@ Upon initialization, this module is set to the latest major release version of t
 
 The `version` parameter (`string` or `number`) will accept the following values:
 
-- v#`, where `v` is the abbreviation for "version" and `#` is the database major version release value (e.g. `1`).
+- `v#`, where `v` is the abbreviation for "version" and `#` is the database major version release value (e.g. `1`).
 - `#` may be set as a numeric value or string.
 - Parsed values must be greater than zero and less than or equal to the current major release version.
 
 Invalid values will be ignored and the version will remain unchanged.
 
-The returned value will be a string with a leading "v" (for version) followed by the currently set version number.
+The returned value will be a `string` with a leading "v" (for version) followed by the currently set version number.
 
 ### diacritics.getVersion()
 
 Upon initialization, this function will always return the current major release version of the diacritics API.
+
+It has no parameters.
 
 ```js
 var diacritics = require("diacritics-transliterator");
 diacritics.getVersion(); // "v1" returned
 ```
 
-The returned value will be a string with a leading "v" (for version) followed by the currently set version number.
+The returned value will be a `string` with a leading "v" (for version) followed by the currently set version number.
 
 ### diacritics.getLanguage(code)
 
@@ -84,7 +86,7 @@ The `code` parameter (type: `string`) will accept any of the following case inse
 - The language written in English (e.g. `German`)
 - The language written in the native language (e.g. `Deutsch`)
 
-The returned value will be an object which includes the root language and any variants.
+The returned value will be an `object` which includes the root language and any variants as provided by the diacritics API.
 
 ```js
 var diacritics = require("diacritics-transliterator");
@@ -99,12 +101,14 @@ var german = diacritics.getLanguage("de");
 */
 ```
 
-If a language is not found, an object with an error "message" is returned.
+If a language is not found, or the string is invalid, an object with an error "message" is returned.
 
 ```js
 var diacritics = require("diacritics-transliterator");
 var test = diacritics.getLanguage("test");
 // test => { "message": "Language 'test' was not found" }
+var invalid = diacritics.getLanguage(1234);
+// invalid => { "message": "Error: Invalid input string" }
 ```
 
 ### diacritics.getVariant(code)
@@ -118,7 +122,7 @@ The `code` parameter (type: `string`) will accept any of the following case inse
   - See [this table](http://data.okfn.org/data/core/language-codes#resource-ietf-language-tags) for a quick reference of available IETF language tags.
 - The language variant name written in plain English.
 
-The returned value will be an object which includes only the variant language.
+The returned value will be an `object` which includes only the variant language as provided by the diacritics API.
 
 ```js
 var diacritics = require("diacritics-transliterator");
@@ -133,12 +137,14 @@ var german = diacritics.getVariant("de");
 */
 ```
 
-If a variant is not found, an object with an error "message" is returned.
+If a variant is not found, or the string is invalid, an object with an error "message" is returned.
 
 ```js
 var diacritics = require("diacritics-transliterator");
 var test = diacritics.getVariant("test");
 // test => { "message": "Variant 'test' was not found" }
+var invalid = diacritics.getVariant(1234);
+// invalid => { "message": "Error: Invalid input string" }
 ```
 
 ### diacritics.getAlphabet(code)
@@ -147,7 +153,7 @@ Returns the metadata and data for all languages matching the given alphabet code
 
 The `code` parameter (type: `string`) must be set using a [ISO 15924](https://en.wikipedia.org/wiki/ISO_15924) case insensitive script code value, e.g. `Latn`.
 
-The returned value will be an object containing all languages that match the set alphabet.
+The returned value will be an `object` containing all languages that match the set alphabet as provided by the diacritics API.
 
 ```js
 var diacritics = require("diacritics-transliterator");
@@ -166,12 +172,14 @@ var latin = diacritics.getAlphabet("latn");
 */
 ```
 
-If an alphabet is not found, an object with an error "message" is returned.
+If an alphabet is not found, or the string is invalid, an object with an error "message" is returned.
 
 ```js
 var diacritics = require("diacritics-transliterator");
 var test = diacritics.getAlphabet("test");
 // test => { "message": "Alphabet 'test' was not found" }
+var invalid = diacritics.getAlphabet(1234);
+// invalid => { "message": "Error: Invalid input string" }
 ```
 
 ### diacritics.getContinent(code)
@@ -180,7 +188,7 @@ Returns the metadata and data for all languages matching the given continent cod
 
 The `code` parameter (type: `string`) must be set using a [ISO-3166](https://en.wikipedia.org/wiki/List_of_sovereign_states_and_dependent_territories_by_continent_%28data_file%29) case insensitive value, e.g. `EU`:
 
-The returned value will be an object containing all languages that match the set continent.
+The returned value will be an `object` containing all languages that match the set continent as provided by the diacritics API.
 
 ```js
 var diacritics = require("diacritics-transliterator");
@@ -195,26 +203,36 @@ var antarctica = diacritics.getContinent("an");
 */
 ```
 
-If a continent is not found, an object with an error "message" is returned.
+If a continent is not found, or the string is invalid, an `object` with an error "message" is returned.
 
 ```js
 var diacritics = require("diacritics-transliterator");
 var test = diacritics.getContinent("test");
 // test => { "message": "Continent 'test' was not found" }
+var invalid = diacritics.getContinent(1234);
+// invalid => { "message": "Error: Invalid input string" }
 ```
 
 ### diacritics.formatUnicode(string)
 
-Converts the escaped unicode as stored within the database (`\\uHHHH` where H = hex) into actual unicode characters. Using `.replace(/\\\u/g, "\u")` will appear to work, but it does not create an actual unicode character; so we must use `.fromCharCode()` to properly convert the string.
+Converts the escaped unicode as stored within the database (`\\uHHHH` where H = hex) into actual unicode characters. Using a simple replace function will appear to work, but it does not create an actual unicode character; use this function to properly convert the string.
 
 The `string` parameter (type: `string`) can contain regular characters as well as the escaped unicode characters. Diacritics within the string will not be modified.
 
-The returned string will have replaced any escaped unicode with the equivalent unicode value
+The returned `string` will have replaced any escaped unicode with the equivalent unicode value.
 
 ```js
 var diacritics = require("diacritics-transliterator");
 var string = diacritics.formatUnicode("T\\u00E9st");
 // string => "Tést"
+```
+
+Invalid inputs will return an `object` with an error "message".
+
+```js
+var diacritics = require("diacritics-transliterator");
+var invalid = diacritics.formatUnicode(1234);
+// invalid => { "message": "Error: Invalid input string" }
 ```
 
 ## Data processing functions
@@ -248,12 +266,14 @@ var data = diacritics.getDiacritics("abcñ-ß123");
 */
 ```
 
-If no diacritics are found in the string, an object with an error "message" is returned.
+If no diacritics are found in the string, or the string is invalid, an object with an error "message" is returned.
 
 ```js
 var diacritics = require("diacritics-transliterator");
 var test = diacritics.getDiacritics("test");
 // test => { "message": "No diacritics found" }
+var invalid = diacritics.getDiacritics(1234);
+// invalid => { "message": "Error: Invalid input string" }
 ```
 
 ### diacritics.getBase(array)
@@ -286,12 +306,14 @@ var data = diacritics.getBase(["u"]);
 */
 ```
 
-If no matching bases are found in the database, an object with an error "message" is returned.
+If no matching bases are found in the database, or the string is invalid, an object with an error "message" is returned.
 
 ```js
 var diacritics = require("diacritics-transliterator");
 var test = diacritics.getBase(["&"]);
 // test => { "message": "No matching bases found" }
+var invalid = diacritics.getBase(1234);
+// invalid => { "message": "Error: Invalid input string" }
 ```
 
 ### diacritics.getDecompose(array)
@@ -317,12 +339,14 @@ var data = diacritics.getDecompose(["ss"]);
 */
 ```
 
-If no matching decomposes are found in the database, an object with an error "message" is returned.
+If no matching decomposes are found in the database, or the string is invalid, an object with an error "message" is returned.
 
 ```js
 var diacritics = require("diacritics-transliterator");
 var test = diacritics.getDecompose(["&", "test"]);
 // test => { "message": "No matching decomposes found" }
+var invalid = diacritics.getDecompose(1234);
+// invalid => { "message": "Error: Invalid input string" }
 ```
 
 ## Transliteration functions
@@ -340,10 +364,6 @@ Replaces diacritics within the string with either the base or decomposed value.
 
 The returned value will be a string with all matching diacritics replaced with the set "base" or "decompose" value.
 
-**Note**
-- An invalid `type` parameter will throw an error.
-- An invalid `variant` parameter or a set variant that does not include one or more diacritics in the string, will not process that diacritic.
-
 ```js
 var transliterate = require("diacritics-transliterator").transliterate;
 // only the German s-sharp is replaced
@@ -357,6 +377,19 @@ var unchanged = transliterate("¿abcñ-ß123?", "base", "test"); // "¿abcñ-ß1
 ```
 
 If no matching diacritics are found in the string or database, the original string is returned.
+
+**Note**
+- An invalid `string` parameter will return an object with an error "message".
+- An invalid `type` parameter will throw an error.
+- An invalid `variant` parameter or a set variant that does not include one or more diacritics in the string, will not process that diacritic.
+
+```js
+var transliterate = require("diacritics-transliterator").transliterate;
+var invalidString = transliterate(1234, "decompose", "de");
+// invalidString => { "message": "Error: Invalid input string" }
+var invalidType = transliterate("?abcn-ß123?", "test", "de");
+// invalidType => { "message": "Error: Invalid 'type' value" }
+```
 
 ### diacritics.createRegExp(string [, options])
 
@@ -547,6 +580,16 @@ The function uses the following parameters:
 
 The returned value will be a regular expression that matches the processed string, or the original string if no diacritics are included.
 
+If no diacritics are found, then the regular expression will include the original text.
+
+, or the string is invalid, an object with an error "message" is returned.
+
+```js
+var diacritics = require("diacritics-transliterator").transliterate;
+var invalid = diacritics.createRegExp(1234);
+// invalid => { "message": "Error: Invalid input string" }
+```
+
 #### Examples &amp; comments:
 
 * Default settings
@@ -678,8 +721,6 @@ The returned value will be a regular expression that matches the processed strin
     });
     // regexp => /\bt(\u00E9|e\u0301)st\b/gu
     ```
-
-If no diacritics are found, then the regular expression will include the original text.
 
 #### __Important Notes__
 

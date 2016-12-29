@@ -29,6 +29,9 @@ test("Get Language", t => {
     t.deepEqual(d.getLanguage("test"), {
         message: "Language 'test' was not found"
     });
+    t.deepEqual(d.getLanguage(1234), {
+        message: "Error: Invalid input string"
+    });
 });
 
 test("Get Variant", t => {
@@ -37,6 +40,9 @@ test("Get Variant", t => {
     t.deepEqual(d.getVariant("test"), {
         message: "Variant 'test' was not found"
     });
+    t.deepEqual(d.getVariant([1,2,3,4]), {
+        message: "Error: Invalid input string"
+    });
 });
 
 test("Get Continent", t => {
@@ -44,6 +50,9 @@ test("Get Continent", t => {
     t.deepEqual(d.getContinent("an"), diacritics.es);
     t.deepEqual(d.getContinent("test"), {
         message: "Continent 'test' was not found"
+    });
+    t.deepEqual(d.getContinent(()=>console.log(123)), {
+        message: "Error: Invalid input string"
     });
 });
 
@@ -54,11 +63,31 @@ test("Get Alphabet", t => {
     t.deepEqual(d.getAlphabet("test"), {
         message: "Alphabet 'test' was not found"
     });
+    t.deepEqual(d.getAlphabet({"a":true}), {
+        message: "Error: Invalid input string"
+    });
 });
 
 test("Format unicode", t => {
     t.is(d.formatUnicode("T\\u00E9st"), "Tést");
     t.is(d.formatUnicode("\\u00C4 Te\\u0301st"), "Ä Tést");
+
+    // invalid inputs
+    t.deepEqual(d.formatUnicode(1234), {
+        message: "Error: Invalid input string"
+    });
+    t.deepEqual(d.formatUnicode([0,1,2,3,4]), {
+        message: "Error: Invalid input string"
+    });
+    t.deepEqual(d.formatUnicode({a:"b",c:"d"}), {
+        message: "Error: Invalid input string"
+    });
+    t.deepEqual(d.formatUnicode(), {
+        message: "Error: Invalid input string"
+    });
+    t.deepEqual(d.formatUnicode(()=>console.log(123)), {
+        message: "Error: Invalid input string"
+    });
 });
 
 test("Get Diacritics", t => {
@@ -83,6 +112,9 @@ test("Get Diacritics", t => {
     t.deepEqual(d.getDiacritics("test"), {
         message: "No diacritics found"
     });
+    t.deepEqual(d.getDiacritics(1234), {
+        message: "Error: Invalid input string"
+    });
 });
 
 test("Get Base", t => {
@@ -101,6 +133,9 @@ test("Get Base", t => {
     t.deepEqual(d.getBase(["&"]), {
         message: "No matching bases found"
     });
+    t.deepEqual(d.getBase(1234), {
+        message: "Error: Invalid input; use a string or array"
+    });
 });
 
 test("Get Decompose", t => {
@@ -118,5 +153,8 @@ test("Get Decompose", t => {
     t.deepEqual(d.getDecompose("ss"), result);
     t.deepEqual(d.getDecompose(["&", "test"]), {
         message: "No matching decomposes found"
+    });
+    t.deepEqual(d.getDecompose(1234), {
+        message: "Error: Invalid input; use a string or array"
     });
 });

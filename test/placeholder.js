@@ -616,4 +616,8 @@ test("Replace Placeholder", t => {
             }
         }
     });
+    // invalid string
+    t.deepEqual(d.replacePlaceholder(1234), {
+        message: "Error: Invalid input string"
+    });
 });

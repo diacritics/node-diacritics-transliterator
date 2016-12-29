@@ -27,12 +27,16 @@ test("Transliterate", t => {
     // no variant found, return original string
     t.is(d.transliterate("¿abcñ-ß123?", "base", "test"), "¿abcñ-ß123?");
 
+    // invalid string
+    t.deepEqual(d.transliterate(1234, "base", "de"), {
+        message: "Error: Invalid input string"
+    });
     // invalid type, throw error
     function invalidType(type, variant) {
         const error = t.throws(() => {
             d.transliterate("¿abcñ-ß123?", type, variant);
         }, Error);
-        t.is(error.message, "Invalid 'type'");
+        t.is(error.message, "Error: Invalid 'type' value");
     }
     invalidType("test", "de");
     invalidType("test", "test");
