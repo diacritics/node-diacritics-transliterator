@@ -36,7 +36,7 @@
                 }
             }
         ],
-        "consistent-return": "warn",
+        "consistent-return": "error",
         "curly": "warn",
         "dot-location": [
             "error",
@@ -51,6 +51,19 @@
         "consistent-this": "error",
         "no-tabs": "error",
         "arrow-spacing": "error",
-        "one-var": "error"
+        "one-var": "error",
+        "complexity": [
+            "error",
+            10
+        ],
+        "max-depth": [
+            "error",
+            8
+        ],
+        "global-require": "error",
+        "no-mixed-requires": "error",
+        "no-new-require": "error",
+        "no-lonely-if": "warn",
+        "no-var": "warn"
     }
 }
