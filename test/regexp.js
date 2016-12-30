@@ -187,7 +187,7 @@ const regexpTests = [{
     // each callback
     regexp: "a tést",
     options: {
-        each: function(character, result, data, index) {
+        each: function(character, result) {
             // Replace space with whitespace character diacritic
             return character === " " ? "\\s" : result;
         }
@@ -244,34 +244,3 @@ test("Create RegExp", t => {
         message: "Error: Invalid input string"
     });
 });
-
-// functions used for debugging
-function debugFormat(val) {
-    // return ignore leading zero if hex <= FFFF
-    let size = val < 0x10000 ? -4 : -5;
-    return "\\u" + ("00000" + val.toString(16)).toUpperCase().slice(size);
-};
-
-function decodeUnicode(str) {
-    const len = str.length;
-    let chr, low,
-        result = [],
-        indx = 0;
-    while(indx < len) {
-        chr = str.charCodeAt(indx++);
-        if(chr > 0x0020 && chr < 0x007F) {
-            // plain character
-            result.push(str.charAt(indx - 1));
-        } else if(chr >= 0xD800 && chr <= 0xDBFF) {
-            // surrogate pair
-            low = str.charCodeAt(indx++);
-            result.push(
-                debugFormat(0x10000 + ((chr - 0xD800) << 10) | (low - 0xDC00))
-            );
-        } else {
-            // Basic Multilingual Plane (BMP) character
-            result.push(debugFormat(chr));
-        }
-    }
-    return result.join("");
-}
