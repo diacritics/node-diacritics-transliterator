@@ -7,18 +7,30 @@
     "test": "ava test/*.js",
     "linting": "eslint ./**/*.js"
   },
+  "bin": {
+    "diacritics": "cli.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/diacritics/node-diacritics-transliterator.git"
   },
   "keywords": [
-    "diacritics",
+    "accents",
+    "alphabet",
+    "continent",
+    "diacritic",
     "search",
+    "language",
+    "variant",
     "database",
-    "replace",
+    "latinize",
+    "decompose",
+    "normalize",
     "transliterate",
-    "regexp",
-    "placeholder"
+    "placeholders",
+    "RegExp",
+    "unicode",
+    "utf8"
   ],
   "author": "The Diacritics Authors",
   "maintainers": [
@@ -43,6 +55,8 @@
     "babel-eslint": "^7.1.1",
     "babel-preset-latest": "^6.22.0",
     "eslint": "^3.14.1",
+    "execa": "^0.6.0",
+    "meow": "^3.7.0",
     "regenerate": "^1.3.2",
     "sync-request": "^4.0.1"
   }
