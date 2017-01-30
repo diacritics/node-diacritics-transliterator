@@ -1,93 +1,122 @@
 /*!***************************************************
  * node-diacritics-transliterator basic tests
  * http://diacritics.io/
- * Copyright (c) 2016–2017, Julian Motz & Rob Garrison
+ * Copyright (c) 2016–2017 The Diacritics Authors
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
-import test from "ava";
-import d from "../index.js";
-import request from "../node_modules/sync-request";
+"use strict";
 
-require("fs").readFile("test/settings.json", "utf8", (err, data) => {
-    if(err) {
-        throw err;
-    }
-    d.debug = JSON.parse(data);
-});
-
-// get current diacritics.json directly
-const dist = "https://raw.githubusercontent.com/diacritics/database/dist/v" +
-    d.maxVersion + "/diacritics.json",
+const test = require("ava"),
+    request = require("sync-request"),
+    d = require("../index.js"),
+    // get current diacritics.json directly
+    dist = "https://raw.githubusercontent.com/diacritics/database/dist/" +
+        d.version + "/diacritics.json",
     response = request("GET", dist),
-    diacritics = response.statusCode === 200 ?
+    data = response.statusCode === 200 ?
         JSON.parse(response.getBody().toString()) :
-        {};
+        {},
+    invalidInput = "Error: Invalid input string";
 
 test("Get Language", t => {
-    t.deepEqual(d.getLanguage("German"), diacritics.de);
-    t.deepEqual(d.getLanguage("es"), diacritics.es);
-    t.deepEqual(d.getLanguage("test"), {
-        message: "Language 'test' was not found"
-    });
-    t.deepEqual(d.getLanguage(1234), {
-        message: "Error: Invalid input string"
-    });
+    let error1, error2;
+    // language (only), set as an array
+    const result = {
+        es: {
+            metadata: data.es.es.metadata,
+            data: data.es.es.data
+        },
+        de: {
+            metadata: data.de.de.metadata,
+            data: data.de.de.data
+        }
+    };
+    t.deepEqual(d.getData({ language: "German" }), data.de);
+    t.deepEqual(d.getData({ language: "es" }), data.es);
+    t.deepEqual(d.getData({ language: ["de", "es"] }), result);
+    // errors
+    error1 = t.throws(() => {
+        d.getData({ language: "test" });
+    }, Error);
+    t.is(error1.message, "Error: Language 'test' was not found");
+    error2 = t.throws(() => {
+        d.getData({ language: 1234 });
+    }, Error);
+    t.is(error2.message, invalidInput);
 });
 
 test("Get Variant", t => {
-    t.deepEqual(d.getVariant("de"), diacritics.de);
-    t.deepEqual(d.getVariant("es"), diacritics.es);
-    t.deepEqual(d.getVariant("test"), {
-        message: "Variant 'test' was not found"
-    });
-    t.deepEqual(d.getVariant([1,2,3,4]), {
-        message: "Error: Invalid input string"
-    });
+    t.deepEqual(d.getData({ variant: "de" }), data.de);
+    t.deepEqual(d.getData({ variant: "es" }), data.es);
+    // errors
+    let error = t.throws(() => {
+        d.getData({ variant: "test" });
+    }, Error);
+    t.is(error.message, "Error: Variant 'test' was not found");
+    error = t.throws(() => {
+        d.getData({ variant: [1,2,3,4] });
+    }, Error);
+    t.is(error.message, invalidInput);
 });
 
 test("Get Continent", t => {
     // Antarctica... this may change once more data is added
-    t.deepEqual(d.getContinent("an"), diacritics.es);
-    t.deepEqual(d.getContinent("test"), {
-        message: "Continent 'test' was not found"
-    });
-    t.deepEqual(d.getContinent(()=>console.log(123)), {
-        message: "Error: Invalid input string"
-    });
+    t.deepEqual(d.getData({ continent: "an" }), data.es);
+    // errors
+    let error = t.throws(() => {
+        d.getData({ continent: "test" });
+    }, Error);
+    t.is(error.message, "Error: Continent 'test' was not found");
+    error = t.throws(() => {
+        d.getData({ continent: () => console.log(123) });
+    }, Error);
+    t.is(error.message, invalidInput);
 });
 
 test("Get Alphabet", t => {
     // only compare one variant, or things could get messy once the database
     // gets bigger
-    t.deepEqual(d.getAlphabet("latn").es, diacritics.es.es);
-    t.deepEqual(d.getAlphabet("test"), {
-        message: "Alphabet 'test' was not found"
-    });
-    t.deepEqual(d.getAlphabet({"a":true}), {
-        message: "Error: Invalid input string"
-    });
+    t.deepEqual(d.getData({ alphabet: "latn" }).es, data.es.es);
+    // errors
+    let error = t.throws(() => {
+        d.getData({ alphabet: "test" });
+    }, Error);
+    t.is(error.message, "Error: Alphabet 'test' was not found");
+    error = t.throws(() => {
+        d.getData({ alphabet: {"a":true} });
+    }, Error);
+    t.is(error.message, invalidInput);
 });
 
 test("Format unicode", t => {
     t.is(d.formatUnicode("T\\u00E9st"), "Tést");
     t.is(d.formatUnicode("\\u00C4 Te\\u0301st"), "Ä Tést");
 
-    // invalid inputs
-    t.deepEqual(d.formatUnicode(1234), {
-        message: "Error: Invalid input string"
-    });
-    t.deepEqual(d.formatUnicode([0,1,2,3,4]), {
-        message: "Error: Invalid input string"
-    });
-    t.deepEqual(d.formatUnicode({a:"b",c:"d"}), {
-        message: "Error: Invalid input string"
-    });
-    t.deepEqual(d.formatUnicode(), {
-        message: "Error: Invalid input string"
-    });
-    t.deepEqual(d.formatUnicode(()=>console.log(123)), {
-        message: "Error: Invalid input string"
-    });
+    // invalid input types
+    let error = t.throws(() => {
+        d.formatUnicode(1234);
+    }, Error);
+    t.is(error.message, invalidInput);
+
+    error = t.throws(() => {
+        d.formatUnicode([0,1,2,3,4]);
+    }, Error);
+    t.is(error.message, invalidInput);
+
+    error = t.throws(() => {
+        d.formatUnicode({a:"b",c:"d"});
+    }, Error);
+    t.is(error.message, invalidInput);
+
+    error = t.throws(() => {
+        d.formatUnicode();
+    }, Error);
+    t.is(error.message, invalidInput);
+
+    error = t.throws(() => {
+        d.formatUnicode(() => console.log(123));
+    }, Error);
+    t.is(error.message, invalidInput);
 });
 
 test("Get Diacritics", t => {
@@ -95,16 +124,16 @@ test("Get Diacritics", t => {
     // database gets bigger
     const result = {
         es: {
-            metadata: diacritics.es.es.metadata,
+            metadata: data.es.es.metadata,
             data: {
-                "ñ": diacritics.es.es.data["ñ"],
-                "¿": diacritics.es.es.data["¿"]
+                "ñ": data.es.es.data["ñ"],
+                "¿": data.es.es.data["¿"]
             }
         },
         de: {
-            metadata: diacritics.de.de.metadata,
+            metadata: data.de.de.metadata,
             data: {
-                "ß": diacritics.de.de.data["ß"]
+                "ß": data.de.de.data["ß"]
             }
         }
     };
@@ -112,49 +141,57 @@ test("Get Diacritics", t => {
     t.deepEqual(d.getDiacritics("test"), {
         message: "No diacritics found"
     });
-    t.deepEqual(d.getDiacritics(1234), {
-        message: "Error: Invalid input string"
-    });
+    // invalid input
+    let error = t.throws(() => {
+        d.getDiacritics(1234);
+    }, Error);
+    t.is(error.message, invalidInput);
 });
 
 test("Get Base", t => {
-    // only compare a unique base, or things could get messy once the database
-    // gets bigger
+    // only compare a unique base, or things could get messy once the
+    // database gets bigger
     const result = {
         de: {
-            metadata: diacritics.de.de.metadata,
+            metadata: data.de.de.metadata,
             data: {
-                "ß": diacritics.de.de.data["ß"]
+                "ß": data.de.de.data["ß"]
             }
         }
     };
-    // getBase will accept a single base string, or array
-    t.deepEqual(d.getBase("ß"), result);
-    t.deepEqual(d.getBase(["&"]), {
-        message: "No matching bases found"
-    });
-    t.deepEqual(d.getBase(1234), {
-        message: "Error: Invalid input; use a string or array"
-    });
+    // getData will accept a single base string, or array
+    t.deepEqual(d.getData({ base: "ß" }), result);
+
+    let error = t.throws(() => {
+        d.getData({ base: ["&"] });
+    }, Error);
+    t.is(error.message, "Error: Base character '&' was not found");
+    error = t.throws(() => {
+        d.getData({ base: 1234 });
+    }, Error);
+    t.is(error.message, invalidInput);
 });
 
 test("Get Decompose", t => {
-    // only compare a unique base, or things could get messy once the database
-    // gets bigger
+    // only compare a unique base, or things could get messy once the
+    // database gets bigger
     const result = {
         de: {
-            metadata: diacritics.de.de.metadata,
+            metadata: data.de.de.metadata,
             data: {
-                "ß": diacritics.de.de.data["ß"]
+                "ß": data.de.de.data["ß"]
             }
         }
     };
-    // getBase will accept a single base string, or array
-    t.deepEqual(d.getDecompose("ss"), result);
-    t.deepEqual(d.getDecompose(["&", "test"]), {
-        message: "No matching decomposes found"
-    });
-    t.deepEqual(d.getDecompose(1234), {
-        message: "Error: Invalid input; use a string or array"
-    });
+    // getData will accept a single string, or array
+    t.deepEqual(d.getData({ decompose: "ss" }), result);
+
+    let error = t.throws(() => {
+        d.getData({ decompose: ["ss", "&"] });
+    }, Error);
+    t.is(error.message, "Error: Decompose value '&' was not found");
+    error = t.throws(() => {
+        d.getData({ decompose: 1234 });
+    }, Error);
+    t.is(error.message, invalidInput);
 });

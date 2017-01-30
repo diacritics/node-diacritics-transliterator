@@ -50,6 +50,7 @@
         "camelcase": "error",
         "consistent-this": "error",
         "no-tabs": "error",
+        "comma-dangle": ["error", "never"],
         "arrow-spacing": "error",
         "one-var": "error",
         "complexity": [
@@ -61,7 +62,6 @@
             8
         ],
         "global-require": "error",
-        "no-mixed-requires": "error",
         "no-new-require": "error",
         "no-lonely-if": "warn",
         "no-var": "warn"

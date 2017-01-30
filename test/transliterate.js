@@ -1,18 +1,13 @@
 /*!***************************************************
  * node-diacritics-transliterator transliterate tests
  * http://diacritics.io/
- * Copyright (c) 2016–2017, Julian Motz & Rob Garrison
+ * Copyright (c) 2016–2017 The Diacritics Authors
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
-import test from "ava";
-import d from "../index.js";
+"use strict";
 
-require("fs").readFile("test/settings.json", "utf8", (err, data) => {
-    if(err) {
-        throw err;
-    }
-    d.debug = JSON.parse(data);
-});
+const test = require("ava"),
+    d = require("../index.js");
 
 test("Transliterate", t => {
     t.is(d.transliterate("¿abcñ-ß123?", "decompose", "de"), "¿abcñ-ss123?");
@@ -28,15 +23,17 @@ test("Transliterate", t => {
     t.is(d.transliterate("¿abcñ-ß123?", "base", "test"), "¿abcñ-ß123?");
 
     // invalid string
-    t.deepEqual(d.transliterate(1234, "base", "de"), {
-        message: "Error: Invalid input string"
-    });
+    let error = t.throws(() => {
+        d.transliterate(1234, "base", "de");
+    }, Error);
+    t.is(error.message, "Error: Invalid input string");
+
     // invalid type, throw error
     function invalidType(type, variant) {
-        const error = t.throws(() => {
+        error = t.throws(() => {
             d.transliterate("¿abcñ-ß123?", type, variant);
         }, Error);
-        t.is(error.message, "Error: Invalid 'type' value");
+        t.is(error.message, "Transliterate Error: Invalid 'type' value");
     }
     invalidType("test", "de");
     invalidType("test", "test");

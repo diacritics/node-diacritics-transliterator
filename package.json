@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "ava test/*.js",
-    "linting": "eslint ./*.js"
+    "linting": "eslint ./**/*.js"
   },
   "repository": {
     "type": "git",
@@ -14,20 +14,21 @@
   "keywords": [
     "diacritics",
     "search",
-    "database"
+    "database",
+    "replace",
+    "transliterate",
+    "regexp",
+    "placeholder"
   ],
-  "author": {
-    "name": "Rob Garrison",
-    "email": "wowmotty@gmail.com"
-  },
+  "author": "The Diacritics Authors",
   "maintainers": [
     {
       "name": "Julian Motz",
-      "web": "https://github.com/julmot"
+      "url": "https://github.com/julmot"
     },
     {
       "name": "Rob Garrison",
-      "web": "https://github.com/Mottie"
+      "url": "https://github.com/Mottie"
     }
   ],
   "license": "MIT",
@@ -40,8 +41,9 @@
   "devDependencies": {
     "ava": "^0.17.0",
     "babel-eslint": "^7.1.1",
-    "eslint": "^3.10.2",
+    "babel-preset-latest": "^6.22.0",
+    "eslint": "^3.14.1",
     "regenerate": "^1.3.2",
-    "sync-request": "^2.1.0"
+    "sync-request": "^4.0.1"
   }
 }

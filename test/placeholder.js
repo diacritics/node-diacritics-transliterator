@@ -1,20 +1,17 @@
 /*!***************************************************
  * node-diacritics-transliterator placeholder tests
  * http://diacritics.io/
- * Copyright (c) 2016–2017, Julian Motz & Rob Garrison
+ * Copyright (c) 2016–2017 The Diacritics Authors
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
-import test from "ava";
-import d from "../index.js";
+"use strict";
 
-require("fs").readFile("test/settings.json", "utf8", (err, data) => {
-    if(err) {
-        throw err;
-    }
-    d.debug = JSON.parse(data);
-});
+const test = require("ava"),
+    d = require("../index"),
+    // used to test extractSettings function
+    p = require("../src/placeholder");
 
-const testPlaceholder = [{
+let testPlaceholder = [{
     string: "u:'<% diacritics:  %>'",
     result: "u:'<% diacritics:  %>'",
     name: "defaults; invalid no placeholder data"
@@ -118,12 +115,12 @@ const testPlaceholder = [{
     result: "Latn",
     name: "defaults; 'de' alphabet, full path"
 }, {
-    string: "<% diacritics: language=es;sources[] %>",
-    path: ["variant", "metadata", "sources"],
+    string: "<% diacritics: language=es;source[] %>",
+    path: ["variant", "metadata", "source"],
     xref: {
         "variant": "variant",
         "metadata": "metadata",
-        "sources": "sources"
+        "source": "source"
     },
     result: "https://en.wikipedia.org/wiki/Spanish_orthography"+
         "#Keyboard_requirements, https://en.wikipedia.org/wiki/Spanish_" +
@@ -132,11 +129,11 @@ const testPlaceholder = [{
         ".org/wiki/Inverted_question_and_exclamation_marks",
     name: "defaults; 'es' all sources, final path"
 }, {
-    string: "<% diacritics: language=es;metadata[sources] %>",
+    string: "<% diacritics: language=es;metadata[source] %>",
     path: ["variant", "metadata"],
     xref: {
         "variant": "variant",
-        "metadata": ["sources"]
+        "metadata": ["source"]
     },
     result: "https://en.wikipedia.org/wiki/Spanish_orthography"+
         "#Keyboard_requirements, https://en.wikipedia.org/wiki/Spanish_" +
@@ -218,12 +215,12 @@ const testPlaceholder = [{
     result: "German, Deutsch",
     name: "defaults; 'de' return language & native"
 }, {
-    string: "<% diacritics: language=de;sources[0] %>",
-    path: ["variant", "metadata", "sources"],
+    string: "<% diacritics: language=de;source[0] %>",
+    path: ["variant", "metadata", "source"],
     xref: {
         "variant": "variant",
         "metadata": "metadata",
-        "sources": [0]
+        "source": [0]
     },
     result: "https://en.wikipedia.org/wiki/German_orthography#" +
             "Special_characters",
@@ -244,28 +241,28 @@ const testPlaceholder = [{
     xref: {
         "variant": "variant",
         "metadata": "metadata",
-        "continent": [0,1]
+        "continent": [0, 1]
     },
     result: "EU",
     name: "defaults; target first two continents where 'de' is spoken; but" +
           "the database contains a string, not an array"
 }, {
-    string: "<% diacritics: variant=de;countries[0,1] %>",
-    path: ["variant", "metadata", "countries"],
+    string: "<% diacritics: variant=de;country[0,1] %>",
+    path: ["variant", "metadata", "country"],
     xref: {
         "variant": "variant",
         "metadata": "metadata",
-        "countries": [0,1]
+        "country": [0, 1]
     },
     result: "AT, BE",
     name: "defaults; target first two countries where 'de' is official"
 }, {
-    string: "<% diacritics: language=es;sources[1,3] %>",
-    path: ["variant", "metadata", "sources"],
+    string: "<% diacritics: language=es;source[1,3] %>",
+    path: ["variant", "metadata", "source"],
     xref: {
         "variant": "variant",
         "metadata": "metadata",
-        "sources": [1, 3]
+        "source": [1, 3]
     },
     result: "https://en.wikipedia.org/wiki/Spanish_language#" +
             "Estimated_number_of_speakers, https://en.wikipedia.org/wiki/" +
@@ -436,23 +433,23 @@ const testPlaceholder = [{
     result: "Native language = Deutsch",
     name: "defaults; get native metadata"
 }, {
-    string: "<a href='<% diacritics: decompose=ss;sources %>'>source</a>",
-    path: ["variant", "metadata", "sources"],
+    string: "<a href='<% diacritics: decompose=ss;source %>'>source</a>",
+    path: ["variant", "metadata", "source"],
     xref: {
         "variant": "variant",
         "metadata": "metadata",
-        "sources": "sources"
+        "source": "source"
     },
     result: "<a href='https://en.wikipedia.org/wiki/German_orthography#" +
             "Special_characters'>source</a>",
     name: "defaults; create a source link"
 }, {
-    string: "<a href='<% diacritics: language=es;sources[1] %>'>source</a>",
-    path: ["variant", "metadata", "sources"],
+    string: "<a href='<% diacritics: language=es;source[1] %>'>source</a>",
+    path: ["variant", "metadata", "source"],
     xref: {
         "variant": "variant",
         "metadata": "metadata",
-        "sources": [1]
+        "source": [1]
     },
     result: "<a href='https://en.wikipedia.org/wiki/Spanish_language#" +
             "Estimated_number_of_speakers'>source</a>",
@@ -496,7 +493,7 @@ const testPlaceholder = [{
     name: "defaults; target specific variant & specific equivalents"
 }, {
     string: "u: '<% diacritics: diacritic=\u00E1;variant[es, xx].equivalents" +
-            "[raw, unicode, html_hex, sources, raw, unicode, 1] %>'",
+            "[raw, unicode, html_hex, source, raw, unicode, 1] %>'",
     path: ["variant", "data", "diacritic", "equivalents"],
     xref: {
         "variant": ["es", "xx"],
@@ -579,45 +576,49 @@ const testPlaceholder = [{
 }];
 
 test("Placeholder Path builder", t => {
-    // set test mode
-    d.testMode();
     let defaults = {
         placeholder: "<% diacritics: {data} %>",
         exclude: [],
         joiner: ", "
     };
-    testPlaceholder.forEach(item => {
-        let options = item.options ?
-                Object.assign({}, defaults, item.options) :
+    // set "testing" flag to prevent console error spam
+    p.testing = true;
+    testPlaceholder.forEach(expected => {
+        let options = expected.options ?
+                Object.assign({}, defaults, expected.options) :
                 defaults,
-            result = d.testing.extractPlaceholderSettings(item.string, options),
-            path = result[0] && result[0].valid ? result[0].path : null;
-        t.deepEqual(path, item.path || null, item.string);
+            result = p.extractSettings(expected.string, options),
+            resultPath = result[0] && result[0].valid ? result[0].path : null;
+        t.deepEqual(resultPath, expected.path || null, expected.string);
         // test second placeholder
         if(result[1]) {
-            path = result[1] && result[1].valid ? result[1].path : null;
-            t.deepEqual(path, item.path2 || null, item.string);
+            resultPath = result[1] && result[1].valid ? result[1].path : null;
+            t.deepEqual(resultPath, expected.path2 || null, expected.string);
         }
-        if(item.xref) {
-            t.deepEqual(result[0].xref, item.xref);
+        if(expected.xref) {
+            t.deepEqual(result[0].xref, expected.xref);
         }
     });
 });
 
 test("Replace Placeholder", t => {
-    testPlaceholder.forEach(item => {
+    testPlaceholder.forEach(expected => {
         // skip invalid placeholders (no console error messages during testing)
         // these are tested by the path builder function
-        if(item.result !== item.string) {
-            let result = d.replacePlaceholder(item.string, item.options);
-            t.is(result, item.result, item.name);
+        if(expected.result !== expected.string) {
+            let result = d.replacePlaceholder(
+                expected.string,
+                expected.options
+            );
+            t.is(result, expected.result, expected.name);
             if (result.message) {
                 console.log(result.message);
             }
         }
     });
     // invalid string
-    t.deepEqual(d.replacePlaceholder(1234), {
-        message: "Error: Invalid input string"
-    });
+    let error = t.throws(() => {
+        d.replacePlaceholder(1234);
+    }, Error);
+    t.is(error.message, "Error: Invalid input string");
 });

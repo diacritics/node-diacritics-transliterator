@@ -1,20 +1,15 @@
 /*!***************************************************
  * node-diacritics-transliterator createRegExp tests
  * http://diacritics.io/
- * Copyright (c) 2016–2017, Julian Motz & Rob Garrison
+ * Copyright (c) 2016–2017 The Diacritics Authors
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
-import test from "ava";
-import d from "../index.js";
+"use strict";
 
-require("fs").readFile("test/settings.json", "utf8", (err, data) => {
-    if(err) {
-        throw err;
-    }
-    d.debug = JSON.parse(data);
-});
+const test = require("ava"),
+    d = require("../index.js");
 
-const regexpTests = [{
+let regexpTests = [{
     // default settings; no diacritics
     regexp: "Test",
     options: {},
@@ -223,7 +218,7 @@ const regexpTests = [{
 }];
 
 test("Create RegExp", t => {
-    let regexp;
+    let regexp, error;
     regexpTests.forEach(tst => {
         regexp = d.createRegExp(tst.regexp, tst.options);
         tst.tests.forEach(item => {
@@ -240,7 +235,8 @@ test("Create RegExp", t => {
         });
     });
     // invalid string
-    t.deepEqual(d.createRegExp(1234), {
-        message: "Error: Invalid input string"
-    });
+    error = t.throws(() => {
+        d.createRegExp(1234);
+    }, Error);
+    t.is(error.message, "Error: Invalid input string");
 });
