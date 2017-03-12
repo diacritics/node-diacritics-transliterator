@@ -33,12 +33,11 @@ const de = diacritics.getData({
   - [transliterate](#transliterate)
   - [createRegExp](#createregexp)
   - [replacePlaceholder](#replaceplaceholder)
+- [Command Line Interface](#command-line-interface)
 
 ## Initializing
 
 Each API method requires the `diacritics-transliterator` module.
-
-Use `new` to instantiate the module.
 
 **Syntax**
 
@@ -121,7 +120,6 @@ diacritics.version = "v1";
 Function to return specificially filtered data from the diacritics database. Include one or more filters to narrow the query. Invalid filters are ignored.
 
 The API _does not_ currently support setting filters as arrays; but internally, if and only if __one__ filter, is set as an array, the metadata and data for all elements within that array will be returned.
-
 
 **Syntax**
 
@@ -232,11 +230,10 @@ If no diacritics are found in the string, an object with a "message" key will be
 **Syntax**
 
 ```js
-/* does not require instantiation */
 diacritics.getDiacritics(string);
 ```
 
-**Return value**
+**Return Value**
 
 An object will be returned containing metadata and data for every matching language variant for the associated diacritic. The language `data` will only contain the matching diacritic.
 
@@ -281,7 +278,6 @@ Alternatively, instead of using the "unicode" data, get the "raw" data from the 
 **Syntax**
 
 ```js
-/* does not require instantiation */
 diacritics.formatUnicode(string);
 ```
 
@@ -1059,6 +1055,119 @@ const diacritics = require("diacritics-transliterator");
 
 const invalid = diacritics.replacePlaceholder();
 /* thrown error => "Error: Invalid input string" */
+```
+
+### Command Line Interface
+
+Command line interface (CLI) support is provided for the functions listed below.
+
+#### Install
+
+```bash
+$ npm install --global diacritics-transliterator
+```
+
+#### Usage
+
+```bash
+$ diacritics --help
+
+  Usage
+    $ diacritics <string> [--<function> [args]]
+
+  Functions
+    --fu, --formatUnicode       Format unicode
+    --tr, --transliterate       Transliterate
+    --cr, --createRegExp        Create Regular Expression
+    --rp, --replacePlaceholder  Replace placeholder
+
+  Options
+    --h  Get help for a specific function
+
+  Examples
+    $ diacritics "\\\\u00e9\\\\u00c9A\\\\u0301" --fu
+    éÉÁ
+    $ diacritics --tr -h
+    $ diacritics --rp -h
+```
+
+**formatUnicode**
+
+```bash
+  formatUnicode usage
+    $ diacritics <string> --fu
+
+  Examples
+    $ diacritics "T\\\\u00e9st" --fu
+    Tést
+    $ diacritics \\\\u00e9\\\\u00c9A\\\\u0301 --fu
+    éÉÁ
+```
+
+**transliterate**
+
+```bash
+  transliterate usage
+    $ diacritics <string> --tr [...]
+
+  Options
+    -t, --type     Type of transliteration [base|decompose] (Default: base)
+    -v, --variant  Language variant
+
+  Example
+    $ diacritics "¿Te gustan los diacríticos?" --tr -v=es -t=base
+    ?Te gustan los diacriticos?
+```
+
+**createRegExp**
+
+```bash
+  createRegExp usage
+    $ diacritics <string> --cr [...]
+
+  Options (add "no-" prefix to set the option to false)
+      caseSensitive (default = true)
+          --c, --caseSensitive, --no-c, --no-caseSensitive
+      diacritics (default = true)
+          --d, --diacritics, --no-d, --no-diacritics
+      flags (default = "gu")
+          --f="gu", --flags="gu"
+      ignoreJoiners (default = false)
+          --j, --ignoreJoiners, --no-j, --no-ignoreJoiners
+      includeEquivalents (default = true)
+          --e, --includeEquivalents, --no-e, --no-includeEquivalents
+      nonDiacritics to false (default = true)
+          --n, --nonDiacritics, --no-n, --no-nonDiacritics
+      replaceDiacritic (default = "\\\\S")
+          --r="\\\\S", --replaceDiacritic="\\\\S"
+
+  Example
+    $ diacritics "T\u00E9st" --cr --no-c
+    /T(\\u00E9|e\\u0301|\\u00C9|E\\u0301)st/gu
+```
+
+**replacePlaceholder**
+
+```bash
+  replacePlaceholder usage
+    $ diacritics <string> --rp --p="<% diacritics:{query} %>" --e="xx,yy"
+
+  options
+      placeholder (default = "<% diacritics:{query} %>")
+          --p="<% diacritics:{query} %>"
+          --placeholder="<% diacritics:{query} %>"
+      exclude (default = ""; use comma separated values)
+          --e="xx,yy"
+          --exclude="xx,yy"
+      joiner (default = ", ")
+          --j=", "
+          --joiner=", "
+
+  Example
+    $ diacritics "u='<% diacritics:base=u;equivalents.raw %>'" --rp
+    u='ü, ü, ú, ú'
+    $ diacritics "u='<% diacritics:base=u;equivalents.raw %>'" --rp --j="+"
+    u='ü+ü+ú+ú'
 ```
 
 ---

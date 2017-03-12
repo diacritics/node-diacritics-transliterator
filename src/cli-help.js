@@ -14,10 +14,10 @@ module.exports = {
     $ diacritics <string> [--<function> [args]]
 
   Functions
-    -fu, --formatUnicode       Format unicode
-    -tr, --transliterate       Transliterate
-    -cr, --createRegExp        Create Regular Expression
-    -rp, --replacePlaceholder  Replace placeholder
+    --fu, --formatUnicode       Format unicode
+    --tr, --transliterate       Transliterate
+    --cr, --createRegExp        Create Regular Expression
+    --rp, --replacePlaceholder  Replace placeholder
 
   Options
     --h  Get help for a specific function

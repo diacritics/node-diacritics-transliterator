@@ -2,7 +2,7 @@
 /*!***************************************************
  * node-diacritics-transliterator cli
  * Diacritic transliteration tools using diacritics.io
- * API from http://diacritics.io/
+ * API from http://api.diacritics.io/
  * Copyright (c) 2016–2017 The Diacritics Authors
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
@@ -11,16 +11,17 @@ const meow = require("meow"),
     d = require("./index.js"),
     // specific function help text file
     help = require("./src/cli-help.js"),
-    cli = meow(help.general),
+    cli = meow(help.overall),
     // cli.input is an array of strings
     // diacritics "test" "test2" => cli.input = ["test", "test2"]
     input = (cli.input || []).join(" "),
     flags = cli.flags,
+    errorMsg = "function requires an input string",
     xref = {
-        fu: flags.formatUnicode      || flags.fu || false ? "fu" : "",
-        tr: flags.transliterate      || flags.tr || false ? "tr" : "",
-        cr: flags.createRegExp       || flags.cr || false ? "cr" : "",
-        rp: flags.replacePlaceholder || flags.rp || false ? "rp" : ""
+        fu: flags.formatUnicode      || flags.fu ? "fu" : "",
+        tr: flags.transliterate      || flags.tr ? "tr" : "",
+        cr: flags.createRegExp       || flags.cr ? "cr" : "",
+        rp: flags.replacePlaceholder || flags.rp ? "rp" : ""
     };
 
 let options = {},
@@ -41,7 +42,8 @@ if(xref.fu) {
         console.log(d.formatUnicode(input));
         process.exit();
     }
-    console.error("Diacritics formatUnicode function requires an input string");
+    console.log(help.fu);
+    console.error(`\n  **Diacritics formatUnicode ${errorMsg}**`);
     process.exit(1);
 }
 
@@ -57,7 +59,8 @@ if(xref.tr) {
         console.log(result);
         process.exit();
     }
-    console.error("Diacritics transliterate function requires an input string");
+    console.log(help.tr);
+    console.error(`\n  **Diacritics transliterate ${errorMsg}**`);
     process.exit(1);
 }
 
@@ -80,7 +83,8 @@ if(xref.cr) {
         console.log(decodeUnicode(result.toString()));
         process.exit();
     }
-    console.error("Diacritics createRegExp function requires an input string");
+    console.log(help.cr);
+    console.error(`\n  **Diacritics createRegExp ${errorMsg}**`);
     process.exit(1);
 }
 
@@ -100,11 +104,12 @@ if(xref.rp) {
         console.log(d.replacePlaceholder(input, options));
         process.exit();
     }
-    console.error(
-        "Diacritics replacePlaceholder function requires an input string"
-    );
+    console.log(help.rp);
+    console.error(`\n  **Diacritics replacePlaceholder ${errorMsg}**`);
     process.exit(1);
 }
+
+console.log(help.overall);
 
 // helper functions
 function setOpt(value1, value2, dflt) {
