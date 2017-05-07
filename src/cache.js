@@ -8,7 +8,15 @@
 "use strict";
 
 const Diacritics = require("./diacritics"),
-    request = require("sync-request");
+    request = require("sync-request"),
+    // metadata list - the api supports multiple settings for metadata only,
+    // e.g. /?continent=EU,OC
+    metadata = [
+        "alphabet",
+        "continent",
+        "country",
+        "language"
+    ];
 
 /**
  * Internal cache to save responses from the diacritics API to minimize
@@ -54,7 +62,15 @@ class Cache {
     static formatURL(params) {
         let query = [];
         Object.keys(params).map(filter => {
-            if(Diacritics.validFilters.includes(filter) && params[filter]) {
+            let val = params[filter],
+                isArray = Array.isArray(val);
+            if(Diacritics.validFilters.includes(filter) && val) {
+                if(
+                    (typeof val !== "string" && !isArray) ||
+                    (isArray && typeof val[0] !== "string")
+                  ) {
+                    throw new TypeError("Error: Invalid input string");
+                }
                 // TODO: add support for arrays when the API supports it
                 query.push(filter + "=" + encodeURIComponent(params[filter]));
             }
@@ -76,55 +92,107 @@ class Cache {
      * and any diacritic specific data
      * @access public
      */
-    static getData(params, options) {
+    static getData(params, options) { 
         let url,
-            keys = typeof params === "object" && Object.keys(params);
-        if (keys && keys.length === 1) {
+            keys = typeof params === "object" && Object.keys(params) || [],
+            // needsProcessing = false;
+            // metadata for 2+ filters does not need extra processing
+            // e.g. getData({ continent: ["eu", "na"] }) is supported by the api
+            // getData({ base: ["u", "U"] }) needs to get "u" & "U" data
+            // separately
+            needsProcessing = keys.some(key => {
+                return Array.isArray(params[key]) && !metadata.includes(key);
+            });
+        if (needsProcessing) {
             // use getProcessed just in case we're passing an array
-            // *** Not supported by the API yet ***
-            // e.g. diacritics.getData({ base: ["u", "U"] });
-            return Cache.getProcessed(keys[0], params[keys[0]], options);
+            Cache.getProcessed(params, options);
         }
         url = Cache.formatURL(params);
         return Cache.getJSON(url, options);
     }
 
     /**
+     * Extract out multi-value keys in data filters (metadata supports arrays)
+     * @param {cache~filterParameters} params
+     * @param {array} keys - keys of the param object
+     * @return {object} - values with multiple settings
+     */
+    static extractKeys(params, keys) {
+        const data = {};
+        // split out metadata & non-array data filters
+        keys.forEach(key => {
+            if(!metadata.includes(key) && Array.isArray(params[key])) {
+                data[key] = params[key];
+            }
+        });
+        return data;
+    }
+
+    /**
+     * Check Cache or get query from database
+     * @param {cache~filterParameters} query - modified to only contain a
+     * single data (not metadata) term if it was an array
+     * @param {cache~responseOptions} options
+     * @param {function} successCb - success callback
+     */
+    static checkCache(query, options, successCb) {
+        const url = Cache.formatURL(query);
+        let item = {};
+        if(Cache.cache[url]) {
+            // get cached values
+            item = Cache.cache[url];
+        } else {
+            item = Cache.getJSON(url, options);
+        }
+        if(!item.message) {
+            successCb(item);
+        }
+    }
+
+    /**
      * Process diacritic base or decompose value of selected character(s) in the
      * given string or array from the cache, or API
-     * @param {string} type - type of data to obtain (e.g. "decompose" or
-     * "base")
-     * @param {(string|string[])} array - A string of a single base or
-     * decompose string (converted into an array), or an array of diacritic base
-     * or decompose string characters to process
+     * @param {cache~filterParameters} params
      * @param {cache~responseOptions} options
      * @return {object} - Base or decompose data for each found array entry, or
      * an error message
      * @access private
      */
-    static getProcessed(type, array, options) {
+    static getProcessed(params, options) {
         let result = {};
-        if(!Array.isArray(array)) {
-            array = [array];
-        }
-        array.forEach(elm => {
-            let url = Cache.formatQuery(type, elm),
-                data = {};
-            if(Cache.cache[url]) {
-                // get cached values
-                data = Cache.cache[url];
-            } else {
-                data = Cache.getJSON(url, options);
-            }
-            if(!data.message) {
-                Object.keys(data).forEach(variant => {
-                    result[variant] = data[variant];
+        const keys = Object.keys(params),
+            data = Cache.extractKeys(params, keys),
+            dataKeys = Object.keys(data),
+            callback = function(item) {
+                Object.keys(item).forEach(variant => {
+                    result[variant] = item[variant];
                 });
             }
-        });
+        if (!dataKeys.length) {
+            // no extra processing needed (i.e. no arrays in data)
+            Cache.checkCache(params, options, callback);
+        } else {
+            // loop through data & get info from the database
+            dataKeys.forEach(key => {
+                let type;
+                if (data[key]) {
+                    type = Object.assign({}, data);
+                    if (Array.isArray(params[key])) {
+                        params[key].forEach(item => {
+                            type[key] = item;
+                            Cache.checkCache(type, options, callback);
+                        });
+                    } else {
+                        type[key] = params[key];
+                        Cache.checkCache(type, options, callback);
+                    }
+                }
+            });
+        }
         if(Object.keys(result).length === 0) {
             result = {
-                "message": `No matching ${type}s found`
+                "message": "No matching results found for " + 
+                    JSON.stringify(params)
             };
         }
         return result;
@@ -133,7 +201,8 @@ class Cache {
     /**
      * @typedef cache~responseOptions
      * @type {object.<string>}
-     * @property {boolean} [ignoreMessage=false] - ignore server messages
+     * @property {boolean} [ignoreMessage=false] - ignore server messages; used
+     * internally
      */
     /**
      * Retrieve information from the diacritic database

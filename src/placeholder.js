@@ -294,7 +294,8 @@ class Placeholder {
      * @access private
      */
     static processPlaceholder(placeholder, string, options) {
-        let filters = placeholder.type,
+        let data = {},
+            filters = placeholder.type,
             // combine essential data for the followPath function
             fpvars = Placeholder.getFPvars(placeholder, options);
         // query database stuff first
@@ -302,12 +303,9 @@ class Placeholder {
             // get diacritics data
             fpvars.database = Util.getDiacritics(placeholder.code);
         } else if(filters === "base" || filters === "decompose") {
+            data[filters] = placeholder.code;
             // get base or decompose data from database or cache
-            fpvars.database = Cache.getProcessed(
-                filters,
-                [placeholder.code],
-                options
-            );
+            fpvars.database = Cache.getProcessed(data, options);
         } else {
             // get language, alphabet or continent data
             fpvars.database = Placeholder.getVariants(
@@ -731,14 +729,17 @@ target = ${string.target ? "valid (" + string.target + ")" : "invalid"}`
      * @access private
      */
     /**
-     * followPath variables
+     * followPath variables - object passed between functions to build a path
+     * up the database tree and apply matching filters. Once the results
+     * have been obtained, the database is queried and the placeholder string is
+     * processed and returned
      * @typedef placeholder~followPathVariables
      * @type {object.<(array, object, string)>}
      * @param {object} database - full returned database object
      * @param {array}  path - path key from {placeholder~validatePathReturn}
      * @param {object} xref - xref key from {placeholder~validatePathReturn}
-     * @param {} results -
-     * @param {number} index -
+     * @param {array} results - placeholder path results
+     * @param {number} indx - current tree path index
      * @param {array} filters - post results filters to be applied
      * @param {placeholder~replacePlaceholderOptions} options
      * @param {placeholder~followPathGetPath} getPath

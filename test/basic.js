@@ -33,7 +33,11 @@ test("Get Language", t => {
     };
     t.deepEqual(d.getData({ language: "German" }), data.de);
     t.deepEqual(d.getData({ language: "es" }), data.es);
-    t.deepEqual(d.getData({ language: ["de", "es"] }), result);
+    t.deepEqual(d.getData({ language: ["German", "Spanish"] }), result);
+    t.deepEqual(d.getData({
+        language: ["German", "Spanish"],
+        country: ["de", "ES"]
+    }), result);
     // errors
     error1 = t.throws(() => {
         d.getData({ language: "test" });

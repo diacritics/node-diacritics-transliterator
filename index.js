@@ -11,6 +11,7 @@ module.exports = require("./src/diacritics");
 module.exports.getData = require("./src/cache").getData;
 module.exports.transliterate = require("./src/transliterate").transliterate;
 module.exports.createRegExp = require("./src/regexp").createRegExp;
-module.exports.replacePlaceholder = require("./src/placeholder").replacePlaceholder;
+module.exports.replacePlaceholder =
+    require("./src/placeholder").replacePlaceholder;
 module.exports.getDiacritics = Util.getDiacritics;
 module.exports.formatUnicode = Util.formatUnicode;

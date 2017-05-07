@@ -117,21 +117,23 @@ diacritics.version = "v1";
 
 ### getData
 
-Function to return specificially filtered data from the diacritics database. Include one or more filters to narrow the query. Invalid filters are ignored.
+Function to return specifically filtered data from the diacritics database. Include one or more filters to narrow the query. Invalid filters are ignored.
 
-The API _does not_ currently support setting filters as arrays; but internally, if and only if __one__ filter, is set as an array, the metadata and data for all elements within that array will be returned.
+The API supports setting filters as arrays for metadata only; This module will allow you to set the metadata as an array, but it will only allow __one__ additional data filter to be set as an array. The metadata and data for all elements within that array will be returned.
 
 **Syntax**
 
 ```js
 diacritics.getData({
+    // metadata
     "alphabet": "",
-    "base": "",
     "continent": "",
     "country": "",
+    "language": "",
+    // data
+    "base": "",
     "decompose": "",
     "diacritic": "",
-    "language": "",
     "variant": ""
 });
 
