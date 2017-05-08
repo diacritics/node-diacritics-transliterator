@@ -2,7 +2,7 @@ language: node_js
 node_js:
   - "stable"
 before_install:
- - chmod a+x ./test/cli.js
+ - chmod a+x ./cli.js
 script:
   - npm run linting
   - npm test
