@@ -15,7 +15,7 @@ If you want to add a new function, please open an issue for discussion first. An
 After you have contributed something check your code by using:
 
 ```bash
-$ npm run linting | npm test
+$ npm run linting && npm test
 ```
 
 [node-js]: https://nodejs.org/en/
