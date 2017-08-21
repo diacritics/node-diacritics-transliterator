@@ -49,13 +49,6 @@ const diacritics = require("diacritics-transliterator");
 
 The diacritics module.
 
-**Parameters**
-
-<dl>
-  <dt><code>version</code> (optional)</dt>
-  <dd>The version of the database API to use. Defaults to the current version.</dd>
-</dl>
-
 ## Basic functions
 
 ### getVersion
