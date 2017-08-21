@@ -50,7 +50,7 @@ class Util {
             isString = typeof item === "string",
             array = isString ? [item] : item;
         array.forEach((elem, index) => {
-            result[index] = elem.replace(/[$()*+\-.\/?[\\\]^{|}]/g, "\\$&");
+            result[index] = elem.replace(/[$()*+\-./?[\\\]^{|}]/g, "\\$&");
         });
         return isString ? result[0] : result;
     }

@@ -68,7 +68,7 @@ class Cache {
                 if(
                     (typeof val !== "string" && !isArray) ||
                     (isArray && typeof val[0] !== "string")
-                  ) {
+                ) {
                     throw new TypeError("Error: Invalid input string");
                 }
                 // TODO: add support for arrays when the API supports it

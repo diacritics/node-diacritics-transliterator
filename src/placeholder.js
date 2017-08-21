@@ -745,12 +745,12 @@ target = ${string.target ? "valid (" + string.target + ")" : "invalid"}`
      * @param {placeholder~followPathGetPath} getPath
      * @param {placeholder~followPathSavePath} savePath
      */
-     /**
-      * Get Follow Path (FP) variables
-      * @param {string} placeholder - current placeholder string
-      * @param {placeholder~replacePlaceholderOptions} options
-      * @return {placeholder~followPathVariables}
-      */
+    /**
+     * Get Follow Path (FP) variables
+     * @param {string} placeholder - current placeholder string
+     * @param {placeholder~replacePlaceholderOptions} options
+     * @return {placeholder~followPathVariables}
+     */
     static getFPvars(placeholder, options) {
         // combine essential data for the followPath function
         const fpvars = {
