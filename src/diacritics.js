@@ -7,35 +7,39 @@
  *****************************************************/
 "use strict";
 
-const currentAPIVersion = 1,
-    databaseURL = "http://api.diacritics.io/",
-    // if renaming any of the below values, also update the "tree" variable
-    // in the placeholder.js file
-    validFilters = [
-        "alphabet",
-        "continent",
-        "country",
-        "language",
-        "variant",
-        "base",
-        "decompose",
-        "diacritic"
-    ];
-
 /**
- * core diacritics module
+ * Core diacritics module
  */
 class Diacritics {
-    /**
-     * @param {string} version - Diacritics database current version
-     */
-    constructor(version = `v${currentAPIVersion}`) {
+    constructor() {
         /**
-         * Diacritics database current version
+         * Current version of the diacritics API
          * @type {string}
          * @access protected
          */
-        this._version = version;
+        this._version = "v1";
+        /**
+         * The URL to the diacritics API
+         * @type {string}
+         * @access public
+         */
+        this.databaseURL = "http://api.diacritics.io/";
+        /**
+         * All valid filter properties of the diacritics API for validation
+         * purposes
+         * @type {string[]}
+         * @access public
+         */
+        this.validFilters = [
+            "alphabet",
+            "continent",
+            "country",
+            "language",
+            "variant",
+            "base",
+            "decompose",
+            "diacritic"
+        ];
     }
 
     /**
@@ -59,21 +63,26 @@ class Diacritics {
      * @example
      * require("diacritics-transliterator").version = "v1";
      * @access public
-     * @todo add method to retrieve current
      */
-    set version(version) {
-        version = parseInt(
-            (version || "").toString().replace(/[^\d.]/g, ""),
-            10
-        );
-        if(version > 0 && version <= currentAPIVersion) {
-            this._version = `v${version}`;
+    set version(newVersion) {
+        const newV = this.convertVersionToInt(newVersion),
+            oldV = this.convertVersionToInt(this._version);
+        if (newV > 0 && newV <= oldV) {
+            this._version = newVersion;
         }
-        return `v${this._version}`;
+        return this._version;
+    }
+
+    /**
+     * Converts a string version, e.g. "v1" to a number, e.g. "1"
+     * @param version - The version to convert
+     * @returns {number}
+     * @access public
+     */
+    convertVersionToInt(version) {
+        return parseInt((version || "").toString().replace(/[^\d.]/g, ""), 10);
     }
 }
 
-let exporting = new Diacritics();
-exporting.databaseURL = databaseURL;
-exporting.validFilters = validFilters;
-module.exports = exporting;
+let singleton = new Diacritics();
+module.exports = singleton;

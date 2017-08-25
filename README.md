@@ -1171,9 +1171,3 @@ $ diacritics --help
 
 - [diacritics database](https://github.com/diacritics/database) – the database behind node-transliterator.
 - [diacritics API](https://github.com/diacritics/api) – the API for the diacritics database.
-
-# Contribution and License Agreement
-
-If you contribute to this project, you are implicitly allowing your code to be distributed under [this license][license]. You are also implicitly verifying that all code is your original work.
-
-[license]: https://git.io/v1EBe
