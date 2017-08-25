@@ -43,20 +43,9 @@ class Diacritics {
     }
 
     /**
-     * Get currently set API version
-     * @return {string} - Major version formatted as "v#" where "#" is the
-     * version number
-     * @example
-     * require("diacritics-transliterator").version;
-     * @access public
-     */
-    get version() {
-        return this._version;
-    }
-
-    /**
-     * Set API version
-     * @param  {(string|number)} version - All non-digits & decimal values will
+     * API version
+     * @type {string}
+     * @param {(string|number)} version - All non-digits & decimal values will
      * be ignored
      * @return {string} - Version formatted as "v#" where "#" is the version
      * number
@@ -64,18 +53,22 @@ class Diacritics {
      * require("diacritics-transliterator").version = "v1";
      * @access public
      */
-    set version(newVersion) {
-        const newV = this.convertVersionToInt(newVersion),
+    set version(version) {
+        const newV = this.convertVersionToInt(version),
             oldV = this.convertVersionToInt(this._version);
         if (newV > 0 && newV <= oldV) {
-            this._version = newVersion;
+            this._version = `v${newV}`;
         }
+        return this._version;
+    }
+
+    get version() {
         return this._version;
     }
 
     /**
      * Converts a string version, e.g. "v1" to a number, e.g. "1"
-     * @param version - The version to convert
+     * @param {string} version - The version to convert
      * @returns {number}
      * @access public
      */
@@ -84,5 +77,5 @@ class Diacritics {
     }
 }
 
-let singleton = new Diacritics();
+const singleton = new Diacritics();
 module.exports = singleton;
