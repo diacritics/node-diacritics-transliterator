@@ -29,11 +29,15 @@ test("Transliterate", t => {
     t.is(error.message, "Error: Invalid input string");
 
     // invalid type, throw error
-    function invalidType(type, variant) {
+    function invalidType(type, languageVariant) {
         error = t.throws(() => {
-            d.transliterate("¿abcñ-ß123?", type, variant);
+            d.transliterate("¿abcñ-ß123?", type, languageVariant);
         }, Error);
-        t.is(error.message, "Transliterate Error: Invalid 'type' value");
+        t.is(
+            error.message,
+            "Transliterate Error: Invalid 'type' value " +
+            "(use 'base' or 'decompose')"
+        );
     }
     invalidType("test", "de");
     invalidType("test", "test");

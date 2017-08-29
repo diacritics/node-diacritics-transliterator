@@ -13,16 +13,20 @@ class Transliterate {
      * Transliterate diacritics in the given string
      * @param  {string} string - Text containing diacritic(s) to transliterate
      * @param  {string} type - Set to "decompose" or "base" (default)
-     * @param  {string} variant - optional set to language variant to use
+     * @param  {string} languageVariant - optional set to language variant
      * @return {string} - processed string, or original string if no diacritics
-     * found; note that if a variant parameter is set and the string contains a
-     * diacritic not found in that language variant, it will not be processed!
+     * found; note that if a languageVariant parameter is set and the string
+     * contains a diacritic not found in that language variant, it will not be
+     * processed!
      * @access public
      */
-    static transliterate(string, type = "base", variant) {
+    static transliterate(string, type = "base", languageVariant) {
         Util.checkString(string);
         if(type !== "base" && type !== "decompose") {
-            throw new TypeError("Transliterate Error: Invalid 'type' value");
+            throw new TypeError(
+                "Transliterate Error: Invalid 'type' value " +
+                "(use 'base' or 'decompose')"
+            );
         }
         let result = string;
         const data = Util.getDiacritics(string),
@@ -36,9 +40,9 @@ class Transliterate {
                     let diacritic = params.diacritic;
                     if(
                         // target selected variant
-                        variant === params.variant ||
+                        languageVariant === params.languageVariant ||
                         // if undefined, then use first available entry
-                        typeof variant === "undefined" &&
+                        typeof languageVariant === "undefined" &&
                         !results[diacritic]
                     ) {
                         results[diacritic] =
@@ -47,7 +51,7 @@ class Transliterate {
                             );
                     }
                 });
-                // results may be undefined if no variant found
+                // results may be undefined if no languageVariant found
                 if(typeof results[diacritic] !== "undefined") {
                     result = result.replace(
                         new RegExp(`(${normalized})`, "g"),
