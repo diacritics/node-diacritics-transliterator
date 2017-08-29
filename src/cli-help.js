@@ -49,11 +49,11 @@ module.exports = {
     $ diacritics <string> --tr [...]
 
   Options
-    -t, --type     Type of transliteration [base|decompose] (Default: base)
-    -v, --variant  Language variant
+    -t, --type      Type of transliteration [base|decompose] (Default: base)
+    -l, --language  Language variant
 
   Example
-    $ diacritics "¿Te gustan los diacríticos?" --tr -v=es -t=base
+    $ diacritics "¿Te gustan los diacríticos?" --tr -l=es -t=base
     ?Te gustan los diacriticos?`,
 
     /**

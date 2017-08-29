@@ -19,7 +19,7 @@ test("Testing formatUnicode cli", async t => {
 test("Testing transliterate cli", async t => {
     const {stdout} = await ex(
         "./cli.js",
-        ["¿Te gustan los diacríticos?", "--tr", "-v=es", "-t=base"]
+        ["¿Te gustan los diacríticos?", "--tr", "-l=es", "-t=base"]
     );
     t.is(stdout, "?Te gustan los diacriticos?");
 });

@@ -54,7 +54,7 @@ if(xref.tr) {
             input,
             // optional type (base or decompose)
             flags.t || flags.type || "base",
-            flags.v || flags.variant || "" // optional variant
+            flags.l || flags.languageVariant || "" // optional languageVariant
         );
         console.log(result);
         process.exit();
