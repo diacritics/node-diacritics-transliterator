@@ -323,8 +323,8 @@ Note:
   <dd>An optional string value set to either "base" or "decompose".
       <ul>
           <li>It defaults to "base".</li>
-          <li>If a "base" value is set and is not found, the "decompose" value will be used instead.</li>
-          <li>If a "decompose" value is set and is not found, it will fallback to the "base" value.</li>
+          <li>If a <a href="https://github.com/diacritics/database/tree/master/spec#datacharactermappingbase">"base"</a> value is set and is not found, the "decompose" value will be used instead.</li>
+          <li>If a <a href="https://github.com/diacritics/database/tree/master/spec#datacharactermappingdecompose">"decompose"</a> value is set and is not found, it will fallback to use the "base" value.</li>
       </ul>
   </dd>
 
