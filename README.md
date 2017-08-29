@@ -101,7 +101,7 @@ console.log(diacritics.version);
 
 ### getData
 
-Function to return specifically filtered data from the diacritics database. Include one or more filters to narrow the query. Invalid filters are ignored.
+This is the main function to be used to return specifically filtered data from the diacritics database. It can include one or more filters to narrow the query, but invalid filters are ignored.
 
 The API supports setting filters as arrays for metadata only; This module will allow you to set the metadata as an array, but it will only allow __one__ additional data filter to be set as an array. The metadata and data for all elements within that array will be returned.
 
