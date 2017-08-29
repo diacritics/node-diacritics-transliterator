@@ -23,9 +23,9 @@ const de = diacritics.getData({
 ## Contents
 
 - [Initializing](#initializing)
-- [Basic functions](#basic-functions)
-  - [getVersion](#getversion)
-  - [setVersion](#setversion)
+- [Basics](#basics)
+  - [Get Version](#get-version)
+  - [Set Version](#set-version)
   - [getData](#getdata)
   - [getDiacritics](#getdiacritics)
   - [formatUnicode](#formatunicode)
@@ -49,25 +49,21 @@ const diacritics = require("diacritics-transliterator");
 
 The diacritics module.
 
-## Basic functions
+## Basics
 
-### getVersion
+### Get Version
 
-Use this function to get the currently set API version.
+Check this property to get the currently set API version.
 
 **Syntax**
 
 ```js
-diacritics.getVersion();
+diacritics.version;
 ```
 
-**Return Value**
+**Value**
 
 The database API major release version formatted as a string with a "v" prefix.
-
-**Parameters**
-
-None
 
 **Example**
 
@@ -77,9 +73,9 @@ const version = diacritics.version;
 /* version => "v1" */
 ```
 
-### setVersion
+### Set Version
 
-Upon initialization, this module is set to the latest major release version of the diacritics API. To change the version, set the version of the API to the desired major release.
+Upon initialization, this module is set to the latest major release version of the diacritics API. To change the version, set the version property of the API to the desired major release.
 
 **Syntax**
 
@@ -87,13 +83,7 @@ Upon initialization, this module is set to the latest major release version of t
 diacritics.version = version;
 ```
 
-**Return Value**
-
-If valid, the set database API version formatted as a string with a "v" prefix.
-
-If invalid, the current database API major release version is returned.
-
-**Parameters**
+**Values**
 
 <dl>
   <dt><code>version</code></dt>
@@ -104,7 +94,8 @@ If invalid, the current database API major release version is returned.
 
 ```js
 const diacritics = require("diacritics-transliterator");
-diacritics.version = "v1";
+diacritics.version = 1; // or "v1"
+console.log(diacritics.version);
 /* => "v1" */
 ```
 
