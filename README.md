@@ -338,7 +338,7 @@ Note:
 ```js
 const transliterate = require("diacritics-transliterator").transliterate;
 
-const german = transliterate("¿abcñ-ß123?", "decompose" "de");
+const german = transliterate("¿abcñ-ß123?", "decompose", "de");
 /* german => "¿abcñ-ss123?"; only the German s-sharp is replaced */
 
 const spanish = transliterate("¿abcñ-ß123?", "base", "es");
