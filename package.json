@@ -1,0 +1,65 @@
+{
+  "name": "diacritics-transliterator",
+  "version": "0.1.0",
+  "description": "Diacritic transliteration tools using diacritics.io API",
+  "main": "index.js",
+  "scripts": {
+    "test": "ava test/*.js",
+    "linting": "eslint ./**/*.js"
+  },
+  "bin": {
+    "diacritics": "cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/diacritics/node-diacritics-transliterator.git"
+  },
+  "keywords": [
+    "accents",
+    "alphabet",
+    "continent",
+    "diacritic",
+    "search",
+    "language",
+    "variant",
+    "database",
+    "latinize",
+    "decompose",
+    "normalize",
+    "transliterate",
+    "placeholders",
+    "RegExp",
+    "unicode",
+    "utf8"
+  ],
+  "author": "The Diacritics Authors",
+  "maintainers": [
+    {
+      "name": "Julian Motz",
+      "url": "https://github.com/julmot"
+    },
+    {
+      "name": "Rob Garrison",
+      "url": "https://github.com/Mottie"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/diacritics/node-diacritics-transliterator/issues"
+  },
+  "engines": {
+    "node": ">=4"
+  },
+  "dependencies": {
+    "meow": "^3.7.0",
+    "regenerate": "^1.3.2",
+    "sync-request": "^4.1.0"
+  },
+  "devDependencies": {
+    "ava": "^0.22.0",
+    "babel-eslint": "^8.0.0",
+    "babel-preset-latest": "^6.24.1",
+    "eslint": "^4.6.1",
+    "execa": "^0.8.0"
+  }
+}
