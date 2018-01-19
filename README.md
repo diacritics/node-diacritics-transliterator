@@ -1,5 +1,8 @@
 # node-diacritics-transliterator
 
+[![Build Status](https://img.shields.io/travis/diacritics/node-diacritics-transliterator/master.svg)](https://travis-ci.org/diacritics/node-diacritics-transliterator)
+[![Greenkeeper](https://badges.greenkeeper.io/diacritics/node-diacritics-transliterator.svg)](https://github.com/diacritics/node-diacritics-transliterator/)
+
 > Diacritic transliteration tool using the diacritics.io API
 
 # Installation
