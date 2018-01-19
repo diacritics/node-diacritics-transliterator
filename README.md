@@ -1,5 +1,7 @@
 # node-diacritics-transliterator
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/diacritics/node-diacritics-transliterator.svg)](https://greenkeeper.io/)
+
 > Diacritic transliteration tool using the diacritics.io API
 
 # Installation
