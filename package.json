@@ -1,0 +1,57 @@
+{
+  "name": "diacritics-transliterator",
+  "version": "0.1.0",
+  "description": "Diacritic transliteration tool using the diacritics.io API",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "nodemon test/test.js",
+    "test": "npm run lint && npm run jasmine",
+    "lint": "eslint src/",
+    "jasmine": "jasmine test/test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/diacritics/node-diacritics-transliterator.git"
+  },
+  "keywords": [
+    "accents",
+    "alphabet",
+    "continent",
+    "diacritic",
+    "search",
+    "language",
+    "variant",
+    "database",
+    "latinize",
+    "decompose",
+    "normalize",
+    "transliterate",
+    "placeholders",
+    "RegExp",
+    "unicode",
+    "utf8"
+  ],
+  "author": "The Diacritics Authors",
+  "maintainers": [
+    {
+      "name": "Julian Kühnel",
+      "url": "https://github.com/julmot"
+    },
+    {
+      "name": "Rob Garrison",
+      "url": "https://github.com/Mottie"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/diacritics/node-diacritics-transliterator/issues"
+  },
+  "devDependencies": {
+    "eslint": "^4.15.0",
+    "jasmine": "^2.9.0",
+    "nodemon": "^1.14.11"
+  },
+  "dependencies": {
+    "node-fetch": "^1.7.3"
+  }
+}
