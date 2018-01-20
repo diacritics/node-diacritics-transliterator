@@ -12,3 +12,7 @@ node_modules/
 # Personal
 TODO
 npm-debug.log*
+
+# Build
+.nyc_output
+coverage/

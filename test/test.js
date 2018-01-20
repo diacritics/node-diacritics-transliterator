@@ -5,7 +5,8 @@
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
 'use strict';
-const Diacritic = require('./../src/main.js');
+const Diacritic = require('./../src/main.js'),
+  assert = require('assert');
 
 describe('Replace', () => {
 
@@ -16,8 +17,8 @@ var x = "Hello";
 `;
 
     Diacritic.replace(testString).then(response => {
-      expect(typeof response).toBe('string');
-      expect(response.length).toBeGreaterThan(0);
+      assert.ok(typeof response === 'string');
+      assert.ok(response.length > 0);
       done();
     }, msg => {
       throw new Error(`Failed: ${msg}`);
