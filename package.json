@@ -53,6 +53,6 @@
     "nyc": "^11.4.1"
   },
   "dependencies": {
-    "node-fetch": "^1.7.3"
+    "node-fetch": "^2.0.0"
   }
 }
