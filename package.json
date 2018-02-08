@@ -47,9 +47,9 @@
     "url": "https://github.com/diacritics/node-diacritics-transliterator/issues"
   },
   "devDependencies": {
-    "eslint": "^4.15.0",
+    "eslint": "^4.17.0",
     "mocha": "^5.0.0",
-    "nodemon": "^1.14.11",
+    "nodemon": "^1.14.12",
     "nyc": "^11.4.1"
   },
   "dependencies": {
