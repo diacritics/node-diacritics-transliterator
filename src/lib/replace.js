@@ -5,8 +5,7 @@
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
 'use strict';
-const fetch = require('./fetch.js'),
-  outputGenerator = require('./output-generator');
+const outputGenerator = require('./output-generator');
 
 class Replace {
   constructor() {
