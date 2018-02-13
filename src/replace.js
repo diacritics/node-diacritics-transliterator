@@ -33,47 +33,37 @@ class Replace {
   }
 
   createString() {
-    const arr = `['${this.collectEquivalents().join('\',\'')}']`;
-    return `${this.options.type} ${this.options.name} = ${arr};`;
-  }
-
-  collectEquivalents() {
-    const concat = []; // arr of strings (equivalent characters)
-    this.joinDiacriticsAndMapping().forEach(equivalents => {
-      const joined = equivalents.join(''),
-        found = equivalents.some(char => {
-          const idx = concat.indexOf(char);
-          if (idx > -1) {
-            concat[idx] = concat[idx] + joined;
-            return true;
-          }
-          return false;
-        });
-      if (!found) {
-        concat.push(joined);
-      }
-    });
-    return concat;
+    const json = JSON.stringify(this.joinDiacriticsAndMapping());
+    return `${this.options.type} ${this.options.name} = ${json};`;
   }
 
   joinDiacriticsAndMapping() {
-    const equivalentsCollection = [];
+    const equivalentsCollection = {
+      'lower': [],
+      'upper': [],
+      'none': []
+    };
     this.extractDiacritics().forEach(obj => {
-      const {key, value} = obj,
-        equivalents = [key];
-      if (value.mapping.base) {
-        equivalents.push(value.mapping.base);
+      const {key: diacritic, value: data} = obj;
+      let chars = [diacritic];
+      if (data.mapping.base) {
+        chars.push(data.mapping.base);
       }
-      /* Decompose makes no sense in the current array of single characters
-      if (value.mapping.decompose) {
-        for (let decomposeProp of Object.keys(value.mapping.decompose)) {
-          if (value.mapping.decompose[decomposeProp]) {
-            equivalents.push(value.mapping.decompose[decomposeProp]);
-          }
+      if (data.mapping.decompose) {
+        if (data.mapping.decompose.value) {
+          chars.push(data.mapping.decompose.value);
+        }
+        if (data.mapping.decompose.titleCase) {
+          chars.push(data.mapping.decompose.titleCase);
         }
       }
-      */
-      equivalentsCollection.push(equivalents);
+      if (this.arrIncludes(equivalentsCollection[data.case], chars) < 0) {
+        // Only push when all the equivalent characters don't exist. E.g.
+        // ü is available in "de" and "es", however only in German it has a
+        // decompose value of "ue". Therefore two entries must be available for
+        // that (redundant) diacritic. Otherwise only push it once
+        equivalentsCollection[data.case].push(chars);
+      }
     });
     return equivalentsCollection;
   }
@@ -91,6 +81,22 @@ class Replace {
       }
     }
     return arr;
+  }
+
+  arrIncludes(haystack, needle) {
+    let i, j, current;
+    for (i = 0; i < haystack.length; ++i) {
+      if (needle.length === haystack[i].length) {
+        current = haystack[i];
+        for (j = 0; j < needle.length && needle[j] === current[j]; ++j) {
+          // already incremented j (comment for linting purposes)
+        }
+        if (j === needle.length) {
+          return i;
+        }
+      }
+    }
+    return -1;
   }
 }
 
