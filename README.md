@@ -40,3 +40,20 @@ An object of options:
 | placeholder | string | '// <% diacritics %>' | The placeholder that will be replaced with  an array of equivalent diacritics and their mappings |
 | type | string | 'const' | The variable type |
 | name | string | 'diacritics' | The variable name |
+
+**Example**:
+
+```javascript
+const Diacritic = require('diacritics-transliterator');
+
+const testString = `
+const x = "Diacritics will be inserted below";
+// <% diacritics %>
+`;
+
+Diacritic.replace(testString).then(response => {
+  console.log(response);
+}, msg => {
+  throw new Error(`Failed: ${msg}`);
+});
+```
