@@ -12,9 +12,9 @@ class OutputGenerator {
     this.data = {};
   }
 
-  init() {
+  init(params) {
     return new Promise((resolve, eject) => {
-      fetch().then(json => {
+      fetch(params).then(json => {
         this.data = json;
         resolve(this.joinDiacriticsAndMapping());
       }, msg => eject(msg));
