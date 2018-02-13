@@ -5,7 +5,7 @@
  * Released under the MIT license https://git.io/v1EBe
  *****************************************************/
 'use strict';
-const replace = require('./replace.js');
+const replace = require('./lib/replace.js');
 
 module.exports = {
   replace

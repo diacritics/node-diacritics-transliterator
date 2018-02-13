@@ -7,34 +7,18 @@
 'use strict';
 const fetch = require('./fetch.js');
 
-class Replace {
+class OutputGenerator {
   constructor() {
-    this.input = '';
-    this.options = {
-      placeholder: '// <% diacritics %>',
-      type: 'const',
-      name: 'diacritics'
-    };
     this.data = {};
   }
 
-  init(input = this.input, options = {}) {
-    this.options = Object.assign({}, this.options, options);
+  init() {
     return new Promise((resolve, eject) => {
-      if (typeof input === 'string' && input && typeof options === 'object') {
-        fetch().then(json => {
-          this.data = json;
-          resolve(input.replace(this.options.placeholder, this.createString()));
-        }, msg => eject(msg));
-      } else {
-        eject('Invalid parameters');
-      }
+      fetch().then(json => {
+        this.data = json;
+        resolve(this.joinDiacriticsAndMapping());
+      }, msg => eject(msg));
     });
-  }
-
-  createString() {
-    const json = JSON.stringify(this.joinDiacriticsAndMapping());
-    return `${this.options.type} ${this.options.name} = ${json};`;
   }
 
   joinDiacriticsAndMapping() {
@@ -100,7 +84,7 @@ class Replace {
   }
 }
 
-const singleton = new Replace();
+const singleton = new OutputGenerator();
 module.exports = function() {
   return singleton.init(...arguments);
 };
