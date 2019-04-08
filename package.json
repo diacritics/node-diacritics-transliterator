@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "eslint": "^5.0.0",
-    "mocha": "^5.0.0",
+    "mocha": "^6.1.2",
     "nodemon": "^1.14.12",
     "nyc": "^12.0.1"
   },
